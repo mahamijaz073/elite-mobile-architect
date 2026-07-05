@@ -1,0 +1,3 @@
+- [Expo auth guard pattern](expo-auth-guard.md) — use useSegments+useRouter+useEffect for auth gating; <Redirect> without a Stack causes blank web screens.
+- [Spin wheel ad-gating](spin-wheel-ad-gating.md) — track adGrantedSpin boolean; reset after spin completes to prevent infinite ad-prompt loop.
+- [useColors dark-key typing](usecolors-typing.md) — explicitly type palette as `typeof colors.light` when both light/dark keys exist; avoid Record<string,...> cast (causes TS2352).

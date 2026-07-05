@@ -1,0 +1,48 @@
+You are an Elite Mobile App Architect. Build a production-ready, highly secure Reward & Quiz Mobile App using Flutter (Dart) or React Native. The frontend architecture must connect flawlessly with a Firebase Backend (Auth, Firestore, Cloud Functions, FCM, App Check) and manage ads via AdMob + Unity Ads Mediation.
+
+### 🛑 CRITICAL COMPLIANCE REGULATION (GOOGLE PLAY POLICY)
+The app codebase, UI layout, hardcoded strings, logs, and comments must strictly AVOID using words like "Earn Money", "Make Cash", "EasyPaisa Withdraw", "Income", "Paid Clicks", or "Earnings".
+- Instead, you must exclusively use: "QuizBox", "Play & Win", "Reward Hub", "Collect Tokens", "Redeem Prizes", "Gift Vouchers", "Claim Reward".
+- Failure to comply will result in an immediate Google Play Store rejection.
+
+### 1. ADVANCED SECURITY & AUTHENTICATION ARCHITECTURE
+- **Authentication Flows:** Implement Google Sign-In and Phone Authentication (SMS OTP via Firebase). Store the payload under the Firestore `users` collection.
+- **Firebase App Check / SafetyNet:** Enforce strict App Check attestation in the application's main entry point (`main.dart` or `App.js`). If the app is modified, run as an emulator without a signature, or if the token is invalid, block access and throw a clean UI error screen.
+- **Strict Server-Side State:** The mobile app client must NEVER write or update `total_tokens` directly inside Firestore. Any action that awards tokens must trigger an HTTPS Callable Firebase Cloud Function. The function will run the security checks and handle database writes server-side.
+
+### 2. THE 20-MINUTE AD-GAP ENGINE & STATE MANAGEMENT
+- **App Open Ad Integration:** Integrate AdMob App Open Ads. When the user launches the app or brings it to the foreground, check if 20 minutes have passed since the last session. If true, present the App Open Ad instantly.
+- **Dashboard State UI:** Create a modern dashboard showing:
+  - User Profile (Avatar & Name)
+  - Interactive Wallet Card: Displaying `total_tokens` and `total_tickets` with real-time Firestore listeners.
+  - Visual Countdown Timer: A persistent circular or linear progress bar counting down from 20:00 minutes to 00:00.
+- **Ad Execution Logic:** 
+  - When the user clicks "Watch Video & Claim Tokens", check the timer. If time has not expired, gray out the button.
+  - If the timer is at 00:00, execute the Rewarded Video Ad via AdMob Mediation (falling back to Unity Ads if AdMob inventory is empty).
+  - Track ad frequency capping: Limit the user to a maximum of 3 video ads per 60 minutes. If the limit is reached, show an explicit toast: "Maximum frequency reached. Please try again after 1 hour."
+- **The Token Callback Mechanism:** On a successful `onUserEarnedReward` callback, execute the secure Cloud Function. 
+  - If the backend flags `is_pool_locked == true` (Daily Prize Pool is full), still successfully grant the 50 tokens to the user's account but show a distinct custom Modal Sheet: "Today's cash prize pool is full! However, 50 Bonus Tokens have been credited to your wallet for tomorrow's Mega Draw!"
+
+### 3. NATIVE ENGAGEMENT MODULES
+- **Brain Quiz Module:** Fetch trivia questions dynamically from a Firestore collection `quizzes`. Implement a 15-second timer per question. If the user answers correctly, reward 5 tokens via Cloud Functions. If they answer incorrectly, display a "Wrong Answer" screen with a button: "Watch Ad to Retry". Clicking it triggers an Interstitial Ad to reset the question.
+- **Captcha Solver Module:** Display a random alphanumeric distorted text string. The user must type it perfectly. Every 5 successfully solved captchas award 20 tokens. Upon the 5th successful input, immediately trigger a full-screen Interstitial Ad before routing them back to the main menu.
+- **Spin the Wheel:** A smooth canvas-based or animated rotary wheel with slices containing varying token rewards (10, 20, 50, 100 tokens) and two "Try Tomorrow" slices. Give 3 free daily spins based on the user's midnight timestamp. For any subsequent spin, the "Spin" button must read "Watch Video to Spin" and trigger a Rewarded Video Ad.
+
+### 4. NEWS FEED (SOCIAL MEDIA ENGAGEMENT HUB)
+- Create a sleek, scrollable timeline view loading posts from the Firestore `posts` collection in descending chronological order (`createdAt`).
+- **Media Render Engine:** The images displayed in the posts are manual payout verification screenshots. They must load directly via standard web URLs fetched from the `screenshot_url` field (these images are hosted externally on Cloudinary/Imgur, minimizing Firebase costs).
+- **User Permission Layer:** Users can ONLY tap Like (toggles increment/decrement in Firestore), trigger a Native Share sheet, and write text in the Comments field. Users cannot create new posts.
+- **Automated Comment Moderation Layer:** When a user submits a comment, intercept the string through a Firebase Cloud Function. The function must parse the text against an active blacklist array fetched from the `banned_words` collection (containing strings like: scam, fake, fraud, bakwas, chor, paid app, etc.). If a match is found, discard the database write entirely, clear the text field, and display a red error message: "Comment contains restricted words."
+
+### 5. THE REDEEM TOKENS GATEWAY
+- Label this screen: "Claim Rewards" or "Redeem Vouchers".
+- Provide conversion cards: "Rs. 500 Reward Voucher (Via EasyPaisa)" for 5,000 tokens, and "Rs. 1000 Reward Voucher (Via JazzCash)" for 10,000 tokens.
+- **The Global Kill-Switch Check:** Before letting the user tap "Redeem", listen to the Firestore path `system_settings/is_pool_locked`. If it evaluates to `true`, completely disable the redemption cards, apply a low-opacity blur filter over them, and display an explicit banner: "Today's Reward Pool has reached capacity. Keep collecting tokens to dominate tomorrow's open draw!"
+
+### 6. COMPLETE FIRESTORE ARCHITECTURAL SCHEMA REFERENCE
+Ensure your data models map directly to these data points:
+- `users`: { uid: string, name: string, email: string, total_tokens: int, total_tickets: int, last_ad_watched_time: timestamp, is_banned: boolean, createdAt: timestamp }
+- `posts`: { post_id: string, admin_name: string, content_text: string, screenshot_url: string, likes_count: int, shares_count: int, comments: array[{ username: string, comment_text: string, timestamp: timestamp }], createdAt: timestamp }
+- `quizzes`: { quiz_id: string, question: string, options: array[string], correct_option_index: int }
+- `banned_words`: { id: "global_list", words: array[string] }
+- `system_settings`: { id: "config", is_pool_locked: boolean, current_day_revenue: float }
