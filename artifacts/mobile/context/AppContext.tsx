@@ -1,12 +1,22 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export interface User {
   uid: string;
   name: string;
   email: string;
   avatarInitials: string;
+  isAnonymous: boolean;
 }
 
 interface AppContextType {
@@ -22,7 +32,11 @@ interface AppContextType {
   dailySpinsUsed: number;
   maxFreeSpins: number;
   captchaStreak: number;
-  login: (user: User) => Promise<void>;
+  /** Show the auth modal and, once signed in, run `action`. */
+  requireAuth: (action: () => void) => void;
+  authModalVisible: boolean;
+  onAuthComplete: () => void;
+  closeAuthModal: () => void;
   logout: () => Promise<void>;
   onAdWatched: () => Promise<{ poolLocked: boolean }>;
   awardTokens: (amount: number) => Promise<void>;
@@ -44,9 +58,24 @@ function getTodayKey(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+function makeInitials(displayName: string | null, phone: string | null): string {
+  if (displayName) {
+    const parts = displayName.trim().split(' ');
+    return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+  }
+  if (phone) return phone.slice(-2);
+  return 'QP';
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Lazy-auth modal
+  const [authModalVisible, setAuthModalVisible] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  // Token economy
   const [tokens, setTokens] = useState(0);
   const [tickets, setTickets] = useState(0);
   const [lastAdWatchedAt, setLastAdWatchedAt] = useState(0);
@@ -57,68 +86,94 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [secondsUntilAdReady, setSecondsUntilAdReady] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load persisted state
+  // ── Firebase Auth listener ─────────────────────────────────────
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, firebaseUser => {
+      if (firebaseUser) {
+        setUser({
+          uid: firebaseUser.uid,
+          name:
+            firebaseUser.displayName ??
+            firebaseUser.phoneNumber ??
+            (firebaseUser.isAnonymous ? 'Guest Player' : 'Player'),
+          email: firebaseUser.email ?? '',
+          avatarInitials: makeInitials(firebaseUser.displayName, firebaseUser.phoneNumber),
+          isAnonymous: firebaseUser.isAnonymous,
+        });
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  // ── Persist token economy ──────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [userStr, tokensStr, ticketsStr, lastAdStr, adLogStr, poolStr, spinStr, captchaStr] =
+        const [tokensStr, ticketsStr, lastAdStr, adLogStr, poolStr, spinStr, captchaStr] =
           await AsyncStorage.multiGet([
-            'user', 'tokens', 'tickets', 'lastAdWatchedAt',
+            'tokens', 'tickets', 'lastAdWatchedAt',
             'adLog', 'isPoolLocked', 'spinData', 'captchaStreak',
           ]);
-
-        if (userStr[1]) setUser(JSON.parse(userStr[1]));
         if (tokensStr[1]) setTokens(parseInt(tokensStr[1], 10));
         if (ticketsStr[1]) setTickets(parseInt(ticketsStr[1], 10));
         if (lastAdStr[1]) setLastAdWatchedAt(parseInt(lastAdStr[1], 10));
         if (adLogStr[1]) setAdLog(JSON.parse(adLogStr[1]));
         if (poolStr[1]) setIsPoolLocked(poolStr[1] === 'true');
         if (captchaStr[1]) setCaptchaStreak(parseInt(captchaStr[1], 10));
-
         if (spinStr[1]) {
           const spinData = JSON.parse(spinStr[1]);
           const today = getTodayKey();
-          if (spinData.date === today) {
-            setDailySpinsUsed(spinData.count);
-          } else {
-            setDailySpinsUsed(0);
-          }
+          setDailySpinsUsed(spinData.date === today ? spinData.count : 0);
         }
-      } catch (_) {
-        // ignore parse errors
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (_) {}
     })();
   }, []);
 
-  // 20-min countdown ticker
+  // ── 20-min countdown ticker ────────────────────────────────────
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - lastAdWatchedAt) / 1000);
-      const remaining = Math.max(0, AD_COOLDOWN_SECONDS - elapsed);
-      setSecondsUntilAdReady(remaining);
-    }, 1000);
-    // compute immediately
-    const elapsed = Math.floor((Date.now() - lastAdWatchedAt) / 1000);
-    setSecondsUntilAdReady(Math.max(0, AD_COOLDOWN_SECONDS - elapsed));
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    const compute = () =>
+      Math.max(0, AD_COOLDOWN_SECONDS - Math.floor((Date.now() - lastAdWatchedAt) / 1000));
+    setSecondsUntilAdReady(compute());
+    timerRef.current = setInterval(() => setSecondsUntilAdReady(compute()), 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [lastAdWatchedAt]);
 
-  const adsWatchedThisHour = adLog.filter(t => Date.now() - t < 3600000).length;
+  const adsWatchedThisHour = adLog.filter(t => Date.now() - t < 3_600_000).length;
   const canWatchAd = secondsUntilAdReady === 0 && adsWatchedThisHour < MAX_ADS_PER_HOUR;
 
-  const login = async (newUser: User) => {
-    setUser(newUser);
-    await AsyncStorage.setItem('user', JSON.stringify(newUser));
-  };
+  // ── Lazy auth ──────────────────────────────────────────────────
+  const requireAuth = useCallback(
+    (action: () => void) => {
+      if (user) {
+        action();
+      } else {
+        pendingActionRef.current = action;
+        setAuthModalVisible(true);
+      }
+    },
+    [user]
+  );
 
+  const onAuthComplete = useCallback(() => {
+    setAuthModalVisible(false);
+    const pending = pendingActionRef.current;
+    pendingActionRef.current = null;
+    if (pending) pending();
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    pendingActionRef.current = null;
+    setAuthModalVisible(false);
+  }, []);
+
+  // ── Actions ────────────────────────────────────────────────────
   const logout = async () => {
-    setUser(null);
-    await AsyncStorage.removeItem('user');
+    await signOut(auth);
+    // onAuthStateChanged will set user = null
   };
 
   const awardTokens = async (amount: number) => {
@@ -132,19 +187,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const now = Date.now();
     setLastAdWatchedAt(now);
     await AsyncStorage.setItem('lastAdWatchedAt', now.toString());
-    const newLog = [...adLog.filter(t => Date.now() - t < 3600000), now];
+    const newLog = [...adLog.filter(t => Date.now() - t < 3_600_000), now];
     setAdLog(newLog);
     await AsyncStorage.setItem('adLog', JSON.stringify(newLog));
   };
 
   const onAdWatched = async (): Promise<{ poolLocked: boolean }> => {
     await resetAdTimer();
-    if (isPoolLocked) {
-      await awardTokens(TOKENS_PER_AD);
-      return { poolLocked: true };
-    }
     await awardTokens(TOKENS_PER_AD);
-    return { poolLocked: false };
+    return { poolLocked: isPoolLocked };
   };
 
   const recordSpin = async () => {
@@ -182,7 +233,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dailySpinsUsed,
         maxFreeSpins: MAX_FREE_SPINS,
         captchaStreak,
-        login,
+        requireAuth,
+        authModalVisible,
+        onAuthComplete,
+        closeAuthModal,
         logout,
         onAdWatched,
         awardTokens,

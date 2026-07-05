@@ -12,6 +12,7 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
+import { useApp } from '@/context/AppContext';
 import { Post, BANNED_WORDS } from '@/constants/mockData';
 
 interface PostCardProps {
@@ -29,6 +30,7 @@ function formatRelativeTime(iso: string): string {
 
 export default function PostCard({ post }: PostCardProps) {
   const colors = useColors();
+  const { requireAuth } = useApp();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes_count);
   const [commentText, setCommentText] = useState('');
@@ -36,7 +38,7 @@ export default function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [commentError, setCommentError] = useState('');
 
-  const handleLike = () => {
+  const doLike = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (liked) {
       setLiked(false);
@@ -47,16 +49,19 @@ export default function PostCard({ post }: PostCardProps) {
     }
   };
 
+  const handleLike = () => {
+    requireAuth(doLike);
+  };
+
   const handleShare = async () => {
     try {
       await Share.share({ message: `${post.content_text}\n\nJoin QuizBox – Play & Win!` });
     } catch (_) {}
   };
 
-  const handleComment = () => {
+  const doComment = () => {
     const text = commentText.trim();
     if (!text) return;
-
     const lowerText = text.toLowerCase();
     const hasBannedWord = BANNED_WORDS.some(word => lowerText.includes(word));
     if (hasBannedWord) {
@@ -65,7 +70,6 @@ export default function PostCard({ post }: PostCardProps) {
       setTimeout(() => setCommentError(''), 3000);
       return;
     }
-
     setCommentError('');
     setComments(prev => [
       ...prev,
@@ -73,6 +77,10 @@ export default function PostCard({ post }: PostCardProps) {
     ]);
     setCommentText('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleComment = () => {
+    requireAuth(doComment);
   };
 
   return (
@@ -84,43 +92,31 @@ export default function PostCard({ post }: PostCardProps) {
         </View>
         <View style={styles.headerText}>
           <Text style={[styles.adminName, { color: colors.foreground }]}>{post.admin_name}</Text>
-          <Text style={[styles.time, { color: colors.mutedForeground }]}>
-            {formatRelativeTime(post.createdAt)}
-          </Text>
+          <Text style={[styles.time, { color: colors.mutedForeground }]}>{formatRelativeTime(post.createdAt)}</Text>
         </View>
         <View style={[styles.officialBadge, { backgroundColor: colors.gold + '22', borderColor: colors.gold + '55' }]}>
           <Text style={[styles.officialText, { color: colors.gold }]}>Official</Text>
         </View>
       </View>
 
-      {/* Content */}
       <Text style={[styles.contentText, { color: colors.foreground }]}>{post.content_text}</Text>
 
-      {/* Screenshot image */}
       <Image
         source={{ uri: post.screenshot_url }}
         style={[styles.screenshot, { backgroundColor: colors.muted }]}
         resizeMode="cover"
       />
 
-      {/* Action bar */}
+      {/* Actions */}
       <View style={styles.actionBar}>
         <TouchableOpacity style={styles.actionBtn} onPress={handleLike} activeOpacity={0.7}>
-          <Feather
-            name={liked ? 'heart' : 'heart'}
-            size={18}
-            color={liked ? colors.destructive : colors.mutedForeground}
-          />
+          <Feather name="heart" size={18} color={liked ? colors.destructive : colors.mutedForeground} />
           <Text style={[styles.actionCount, { color: liked ? colors.destructive : colors.mutedForeground }]}>
             {likeCount}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => setShowComments(prev => !prev)}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowComments(prev => !prev)} activeOpacity={0.7}>
           <Feather name="message-circle" size={18} color={colors.mutedForeground} />
           <Text style={[styles.actionCount, { color: colors.mutedForeground }]}>{comments.length}</Text>
         </TouchableOpacity>
@@ -130,7 +126,6 @@ export default function PostCard({ post }: PostCardProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Comments section */}
       {showComments && (
         <View style={[styles.commentsSection, { borderTopColor: colors.border }]}>
           {comments.map((c, i) => (
@@ -166,34 +161,13 @@ export default function PostCard({ post }: PostCardProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    gap: 12,
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  card: { borderRadius: 16, borderWidth: 1, overflow: 'hidden', gap: 12, padding: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1 },
   adminName: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   time: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  officialBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
+  officialBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
   officialText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   contentText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20 },
   screenshot: { width: '100%', height: 180, borderRadius: 10 },
@@ -206,14 +180,7 @@ const styles = StyleSheet.create({
   commentText: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18 },
   noComments: { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   errorText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  commentInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 40,
-  },
+  commentInputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, height: 40 },
   commentInput: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', height: '100%' },
   sendBtn: { padding: 4 },
 });

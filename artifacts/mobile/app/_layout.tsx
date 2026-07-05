@@ -11,41 +11,36 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProvider, useApp } from '@/context/AppContext';
+import AuthModal from '@/components/AuthModal';
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function AuthGuard() {
-  const { user, isLoading } = useApp();
-  const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoading) return;
-    const inAuthGroup = segments[0] === 'auth';
-    if (!user && !inAuthGroup) {
-      router.replace('/auth');
-    } else if (user && inAuthGroup) {
-      router.replace('/(tabs)');
-    }
-  }, [user, isLoading, segments]);
-
-  return null;
+/** Renders the global lazy-auth modal driven by AppContext. */
+function GlobalAuthModal() {
+  const { authModalVisible, onAuthComplete, closeAuthModal } = useApp();
+  return (
+    <AuthModal
+      visible={authModalVisible}
+      onSuccess={onAuthComplete}
+      onDismiss={closeAuthModal}
+    />
+  );
 }
 
 function RootLayoutNav() {
   return (
     <>
-      <AuthGuard />
+      {/* App opens directly — no auth gate on launch */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="auth" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
+      <GlobalAuthModal />
     </>
   );
 }

@@ -24,54 +24,38 @@ interface RewardTier {
 }
 
 const REWARD_TIERS: RewardTier[] = [
-  {
-    label: 'Rs. 500 Gift Voucher',
-    amount: 'Rs. 500',
-    method: 'EasyPaisa',
-    tokensRequired: 5000,
-    icon: 'gift',
-    color: '#2ED573',
-  },
-  {
-    label: 'Rs. 1000 Gift Voucher',
-    amount: 'Rs. 1,000',
-    method: 'JazzCash',
-    tokensRequired: 10000,
-    icon: 'award',
-    color: '#F5C842',
-  },
+  { label: 'Rs. 500 Gift Voucher', amount: 'Rs. 500', method: 'EasyPaisa', tokensRequired: 5000, icon: 'gift', color: '#2ED573' },
+  { label: 'Rs. 1000 Gift Voucher', amount: 'Rs. 1,000', method: 'JazzCash', tokensRequired: 10000, icon: 'award', color: '#F5C842' },
 ];
 
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { tokens, isPoolLocked } = useApp();
+  const { tokens, isPoolLocked, requireAuth, user } = useApp();
 
-  const handleRedeem = (tier: RewardTier) => {
-    if (isPoolLocked) return;
-    if (tokens < tier.tokensRequired) return;
+  const doRedeem = (tier: RewardTier) => {
+    if (isPoolLocked || tokens < tier.tokensRequired) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Redeem Voucher',
-      `You are about to redeem ${tier.amount} via ${tier.method}.\n\nMake sure your ${tier.method} account is linked in your profile.\n\nPayout processed within 24-48 hours.`,
+      `You are about to redeem ${tier.amount} via ${tier.method}.\n\nPayouts are processed within 24–48 hours.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          onPress: () => {
-            Alert.alert(
-              'Redemption Submitted!',
-              'Your voucher request has been submitted. You will receive your Gift Voucher within 24-48 hours.'
-            );
-          },
+          onPress: () =>
+            Alert.alert('Redemption Submitted!', 'Your voucher request is under review. You will receive your Gift Voucher within 48 hours.'),
         },
       ]
     );
   };
 
+  const handleRedeem = (tier: RewardTier) => {
+    requireAuth(() => doRedeem(tier));
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View
         style={[
           styles.header,
@@ -84,7 +68,7 @@ export default function RewardsScreen() {
       >
         <View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Claim Rewards</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Redeem your tokens for Gift Vouchers</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Redeem tokens for Gift Vouchers</Text>
         </View>
         <View style={[styles.tokenChip, { backgroundColor: colors.gold + '22', borderColor: colors.gold + '55' }]}>
           <MaterialCommunityIcons name="lightning-bolt" size={14} color={colors.gold} />
@@ -97,17 +81,26 @@ export default function RewardsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Pool locked banner */}
-        {isPoolLocked && (
-          <View style={[styles.lockedBanner, { backgroundColor: colors.destructive + '18', borderColor: colors.destructive + '44' }]}>
-            <Ionicons name="lock-closed" size={20} color={colors.destructive} />
-            <Text style={[styles.lockedText, { color: colors.destructive }]}>
-              Today's Reward Pool has reached capacity. Keep collecting tokens to dominate tomorrow's open draw!
+        {/* Guest banner */}
+        {!user && (
+          <View style={[styles.infoBanner, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '44' }]}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.accent} />
+            <Text style={[styles.infoBannerText, { color: colors.accent }]}>
+              Sign in to redeem your tokens for real prizes.
             </Text>
           </View>
         )}
 
-        {/* Token balance card */}
+        {isPoolLocked && (
+          <View style={[styles.lockedBanner, { backgroundColor: colors.destructive + '18', borderColor: colors.destructive + '44' }]}>
+            <Ionicons name="lock-closed" size={20} color={colors.destructive} />
+            <Text style={[styles.lockedText, { color: colors.destructive }]}>
+              Today's Reward Pool is at capacity. Keep collecting tokens for tomorrow's draw!
+            </Text>
+          </View>
+        )}
+
+        {/* Balance */}
         <View style={[styles.balanceCard, { backgroundColor: colors.card, borderColor: colors.gold + '44' }]}>
           <View style={styles.balanceTop}>
             <View>
@@ -119,12 +112,7 @@ export default function RewardsScreen() {
             </View>
           </View>
           <View style={[styles.progressBg, { backgroundColor: colors.muted }]}>
-            <View
-              style={[
-                styles.progressFill,
-                { backgroundColor: colors.gold, width: `${Math.min(100, (tokens / 5000) * 100)}%` },
-              ]}
-            />
+            <View style={[styles.progressFill, { backgroundColor: colors.gold, width: `${Math.min(100, (tokens / 5000) * 100)}%` }]} />
           </View>
           <View style={styles.milestoneRow}>
             <Text style={[styles.milestoneText, { color: colors.mutedForeground }]}>0</Text>
@@ -137,8 +125,8 @@ export default function RewardsScreen() {
         <View style={[styles.howCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>How to Redeem</Text>
           {[
-            { step: '1', text: 'Collect the required tokens by playing, spinning, and watching videos.' },
-            { step: '2', text: 'Tap "Redeem Voucher" on a tier below to submit your request.' },
+            { step: '1', text: 'Collect tokens by playing, spinning, and watching videos.' },
+            { step: '2', text: 'Sign in, then tap "Redeem Voucher" on a tier below.' },
             { step: '3', text: 'Receive your Gift Voucher via EasyPaisa or JazzCash within 48 hours.' },
           ].map(item => (
             <View key={item.step} style={styles.stepRow}>
@@ -150,11 +138,10 @@ export default function RewardsScreen() {
           ))}
         </View>
 
-        {/* Reward tiers */}
         <Text style={[styles.tiersLabel, { color: colors.mutedForeground }]}>VOUCHER TIERS</Text>
 
         {REWARD_TIERS.map(tier => {
-          const canRedeem = tokens >= tier.tokensRequired && !isPoolLocked;
+          const canRedeem = user && tokens >= tier.tokensRequired && !isPoolLocked;
           const deficit = Math.max(0, tier.tokensRequired - tokens);
           const progress = Math.min(1, tokens / tier.tokensRequired);
 
@@ -163,11 +150,7 @@ export default function RewardsScreen() {
               key={tier.label}
               style={[
                 styles.tierCard,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: canRedeem ? tier.color + '88' : colors.border,
-                  opacity: isPoolLocked ? 0.45 : 1,
-                },
+                { backgroundColor: colors.card, borderColor: canRedeem ? tier.color + '88' : colors.border },
               ]}
             >
               {isPoolLocked && (
@@ -189,43 +172,24 @@ export default function RewardsScreen() {
                 </View>
                 <View style={[styles.costBadge, { backgroundColor: colors.muted }]}>
                   <MaterialCommunityIcons name="lightning-bolt" size={12} color={colors.gold} />
-                  <Text style={[styles.costText, { color: colors.gold }]}>
-                    {tier.tokensRequired.toLocaleString()}
-                  </Text>
+                  <Text style={[styles.costText, { color: colors.gold }]}>{tier.tokensRequired.toLocaleString()}</Text>
                 </View>
               </View>
 
-              {/* Progress to this tier */}
               <View style={[styles.tierProgressBg, { backgroundColor: colors.muted }]}>
-                <View
-                  style={[
-                    styles.tierProgressFill,
-                    { backgroundColor: tier.color, width: `${progress * 100}%` },
-                  ]}
-                />
+                <View style={[styles.tierProgressFill, { backgroundColor: tier.color, width: `${progress * 100}%` }]} />
               </View>
               <Text style={[styles.tierProgressText, { color: colors.mutedForeground }]}>
-                {canRedeem
-                  ? 'Ready to redeem!'
-                  : `${deficit.toLocaleString()} more tokens needed`}
+                {canRedeem ? 'Ready to redeem!' : !user ? 'Sign in to redeem' : `${deficit.toLocaleString()} more tokens needed`}
               </Text>
 
               <TouchableOpacity
-                style={[
-                  styles.redeemBtn,
-                  { backgroundColor: canRedeem ? tier.color : colors.muted },
-                ]}
+                style={[styles.redeemBtn, { backgroundColor: canRedeem ? tier.color : colors.muted }]}
                 onPress={() => handleRedeem(tier)}
-                disabled={!canRedeem}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.redeemBtnText,
-                    { color: canRedeem ? '#fff' : colors.mutedForeground },
-                  ]}
-                >
-                  {isPoolLocked ? 'Pool Locked' : canRedeem ? 'Redeem Voucher' : 'Not enough tokens'}
+                <Text style={[styles.redeemBtnText, { color: canRedeem ? '#fff' : colors.mutedForeground }]}>
+                  {isPoolLocked ? 'Pool Locked' : !user ? 'Sign In to Redeem' : canRedeem ? 'Redeem Voucher' : 'Not enough tokens'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -235,7 +199,7 @@ export default function RewardsScreen() {
         <View style={[styles.disclaimerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="shield-checkmark-outline" size={16} color={colors.accent} />
           <Text style={[styles.disclaimerText, { color: colors.mutedForeground }]}>
-            All Gift Vouchers are processed by our admin team. Vouchers are awarded for token collection, not as direct monetary payment. Terms apply.
+            All Gift Vouchers are processed by our team. Vouchers are awarded for token collection. Terms apply.
           </Text>
         </View>
       </ScrollView>
@@ -258,10 +222,9 @@ const styles = StyleSheet.create({
   tokenChipText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 14 },
-  lockedBanner: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    borderWidth: 1, borderRadius: 14, padding: 14,
-  },
+  infoBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14 },
+  infoBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
+  lockedBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14 },
   lockedText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', lineHeight: 18 },
   balanceCard: { borderRadius: 20, borderWidth: 1.5, padding: 20, gap: 12 },
   balanceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -275,10 +238,7 @@ const styles = StyleSheet.create({
   howCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
   sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  stepBadge: {
-    width: 28, height: 28, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
+  stepBadge: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   stepNum: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   stepText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18 },
   tiersLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.5, marginTop: 2 },
@@ -290,21 +250,13 @@ const styles = StyleSheet.create({
   tierLabel: { fontSize: 13, fontFamily: 'Inter_500Medium' },
   methodRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   methodText: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  costBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8,
-  },
+  costBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 },
   costText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   tierProgressBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   tierProgressFill: { height: '100%', borderRadius: 3 },
   tierProgressText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  redeemBtn: {
-    height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-  },
+  redeemBtn: { height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   redeemBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  disclaimerCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    borderRadius: 14, borderWidth: 1, padding: 14,
-  },
+  disclaimerCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 14, borderWidth: 1, padding: 14 },
   disclaimerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
 });

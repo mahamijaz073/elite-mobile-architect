@@ -38,11 +38,11 @@ function shuffleQuestions() {
 export default function PlayScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { awardTokens, onCaptchaSolved, captchaStreak } = useApp();
+  const { awardTokens, onCaptchaSolved, captchaStreak, requireAuth } = useApp();
 
   const [mode, setMode] = useState<Mode>('quiz');
 
-  // --- Quiz state ---
+  // Quiz
   const [questions] = useState(shuffleQuestions);
   const [qIndex, setQIndex] = useState(0);
   const [quizState, setQuizState] = useState<QuizState>('question');
@@ -53,7 +53,7 @@ export default function PlayScreen() {
   const [quizScore, setQuizScore] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // --- Captcha state ---
+  // Captcha
   const [captchaCode, setCaptchaCode] = useState(generateCaptcha);
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaFeedback, setCaptchaFeedback] = useState<'idle' | 'correct' | 'wrong'>('idle');
@@ -80,7 +80,7 @@ export default function PlayScreen() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [qIndex, mode, quizState]);
 
-  const handleOptionSelect = async (index: number) => {
+  const doSelectOption = async (index: number) => {
     if (quizState !== 'question') return;
     if (timerRef.current) clearInterval(timerRef.current);
     setSelectedOption(index);
@@ -97,6 +97,10 @@ export default function PlayScreen() {
     }
   };
 
+  const handleOptionSelect = (index: number) => {
+    requireAuth(() => doSelectOption(index));
+  };
+
   const nextQuestion = () => {
     setQIndex(prev => prev + 1);
     setSelectedOption(null);
@@ -104,19 +108,7 @@ export default function PlayScreen() {
     setTimeLeft(QUESTION_SECONDS);
   };
 
-  const handleRetryWithAd = () => {
-    setShowQuizAd(true);
-  };
-
-  const handleQuizAdComplete = () => {
-    setShowQuizAd(false);
-    setSelectedOption(null);
-    setQuizState('question');
-    setTimeLeft(QUESTION_SECONDS);
-  };
-
-  // Captcha handlers
-  const handleCaptchaSubmit = async () => {
+  const doCaptchaSubmit = async () => {
     if (captchaInput.toUpperCase() !== captchaCode) {
       setCaptchaFeedback('wrong');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -134,12 +126,13 @@ export default function PlayScreen() {
       setCaptchaCode(generateCaptcha());
       setCaptchaInput('');
       setCaptchaFeedback('idle');
-      if (result.rewardTokens > 0) {
-        setShowCaptchaToken(true);
-      } else if (result.showAd) {
-        setShowCaptchaAd(true);
-      }
+      if (result.rewardTokens > 0) setShowCaptchaToken(true);
+      else if (result.showAd) setShowCaptchaAd(true);
     }, 600);
+  };
+
+  const handleCaptchaSubmit = () => {
+    requireAuth(doCaptchaSubmit);
   };
 
   const timerCircumference = 2 * Math.PI * 22;
@@ -149,7 +142,7 @@ export default function PlayScreen() {
     (i: number) => {
       if (quizState === 'question') return colors.secondary;
       if (i === currentQuestion.correct_option_index) return colors.success + '33';
-      if (i === selectedOption && i !== currentQuestion.correct_option_index) return colors.destructive + '33';
+      if (i === selectedOption) return colors.destructive + '33';
       return colors.secondary;
     },
     [quizState, selectedOption, currentQuestion, colors]
@@ -159,7 +152,7 @@ export default function PlayScreen() {
     (i: number) => {
       if (quizState === 'question') return colors.border;
       if (i === currentQuestion.correct_option_index) return colors.success;
-      if (i === selectedOption && i !== currentQuestion.correct_option_index) return colors.destructive;
+      if (i === selectedOption) return colors.destructive;
       return colors.border;
     },
     [quizState, selectedOption, currentQuestion, colors]
@@ -167,7 +160,6 @@ export default function PlayScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View
         style={[
           styles.header,
@@ -190,10 +182,7 @@ export default function PlayScreen() {
         {(['quiz', 'captcha'] as Mode[]).map(m => (
           <TouchableOpacity
             key={m}
-            style={[
-              styles.toggleBtn,
-              mode === m && { backgroundColor: colors.card, borderRadius: 10 },
-            ]}
+            style={[styles.toggleBtn, mode === m && { backgroundColor: colors.card, borderRadius: 10 }]}
             onPress={() => setMode(m)}
           >
             <Ionicons
@@ -201,12 +190,7 @@ export default function PlayScreen() {
               size={16}
               color={mode === m ? colors.primary : colors.mutedForeground}
             />
-            <Text
-              style={[
-                styles.toggleText,
-                { color: mode === m ? colors.foreground : colors.mutedForeground },
-              ]}
-            >
+            <Text style={[styles.toggleText, { color: mode === m ? colors.foreground : colors.mutedForeground }]}>
               {m === 'quiz' ? 'Brain Quiz' : 'Captcha Solver'}
             </Text>
           </TouchableOpacity>
@@ -218,7 +202,7 @@ export default function PlayScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ===== QUIZ MODE ===== */}
+        {/* ── QUIZ ── */}
         {mode === 'quiz' && (
           <>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -226,7 +210,6 @@ export default function PlayScreen() {
                 <Text style={[styles.qNumLabel, { color: colors.mutedForeground }]}>
                   Q{(qIndex % questions.length) + 1} of {questions.length}
                 </Text>
-                {/* Circular timer */}
                 <View style={styles.timerCircle}>
                   <Svg width={52} height={52}>
                     <Circle cx={26} cy={26} r={22} stroke={colors.muted} strokeWidth={5} fill="none" />
@@ -236,8 +219,7 @@ export default function PlayScreen() {
                       strokeWidth={5} fill="none"
                       strokeDasharray={`${timerCircumference} ${timerCircumference}`}
                       strokeDashoffset={timerCircumference - timerDash}
-                      strokeLinecap="round"
-                      rotation="-90" origin="26,26"
+                      strokeLinecap="round" rotation="-90" origin="26,26"
                     />
                   </Svg>
                   <View style={styles.timerCenter}>
@@ -247,19 +229,14 @@ export default function PlayScreen() {
                   </View>
                 </View>
               </View>
-              <Text style={[styles.questionText, { color: colors.foreground }]}>
-                {currentQuestion.question}
-              </Text>
+              <Text style={[styles.questionText, { color: colors.foreground }]}>{currentQuestion.question}</Text>
             </View>
 
             <View style={styles.optionsGrid}>
               {currentQuestion.options.map((opt, i) => (
                 <TouchableOpacity
                   key={i}
-                  style={[
-                    styles.optionBtn,
-                    { backgroundColor: optionBg(i), borderColor: optionBorder(i) },
-                  ]}
+                  style={[styles.optionBtn, { backgroundColor: optionBg(i), borderColor: optionBorder(i) }]}
                   onPress={() => handleOptionSelect(i)}
                   disabled={quizState !== 'question'}
                   activeOpacity={0.75}
@@ -287,10 +264,7 @@ export default function PlayScreen() {
                   <Text style={[styles.feedbackTitle, { color: colors.success }]}>Correct! +5 Tokens</Text>
                   <Text style={[styles.feedbackSub, { color: colors.mutedForeground }]}>Keep going!</Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.nextBtn, { backgroundColor: colors.success }]}
-                  onPress={nextQuestion}
-                >
+                <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.success }]} onPress={nextQuestion}>
                   <Text style={[styles.nextBtnText, { color: '#fff' }]}>Next</Text>
                 </TouchableOpacity>
               </View>
@@ -306,17 +280,11 @@ export default function PlayScreen() {
                   <Text style={[styles.feedbackSub, { color: colors.mutedForeground }]}>Watch an ad to retry</Text>
                 </View>
                 <View style={{ gap: 6 }}>
-                  <TouchableOpacity
-                    style={[styles.nextBtn, { backgroundColor: colors.accent }]}
-                    onPress={handleRetryWithAd}
-                  >
+                  <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.accent }]} onPress={() => setShowQuizAd(true)}>
                     <MaterialCommunityIcons name="play-circle-outline" size={14} color="#fff" />
                     <Text style={[styles.nextBtnText, { color: '#fff' }]}>Retry</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.nextBtn, { backgroundColor: colors.muted }]}
-                    onPress={nextQuestion}
-                  >
+                  <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.muted }]} onPress={nextQuestion}>
                     <Text style={[styles.nextBtnText, { color: colors.mutedForeground }]}>Skip</Text>
                   </TouchableOpacity>
                 </View>
@@ -325,22 +293,17 @@ export default function PlayScreen() {
           </>
         )}
 
-        {/* ===== CAPTCHA MODE ===== */}
+        {/* ── CAPTCHA ── */}
         {mode === 'captcha' && (
           <>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.captchaHeader}>
                 <View style={styles.captchaProgress}>
                   <Text style={[styles.captchaProgressLabel, { color: colors.mutedForeground }]}>
-                    Progress: {captchaStreak}/{5}
+                    Progress: {captchaStreak}/5
                   </Text>
                   <View style={[styles.progressBar, { backgroundColor: colors.muted }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { backgroundColor: colors.success, width: `${(captchaStreak / 5) * 100}%` },
-                      ]}
-                    />
+                    <View style={[styles.progressFill, { backgroundColor: colors.success, width: `${(captchaStreak / 5) * 100}%` }]} />
                   </View>
                 </View>
                 <View style={[styles.rewardChip, { backgroundColor: colors.gold + '22', borderColor: colors.gold + '44' }]}>
@@ -349,10 +312,9 @@ export default function PlayScreen() {
               </View>
 
               <Text style={[styles.captchaInstructions, { color: colors.mutedForeground }]}>
-                Type the code exactly as shown below:
+                Type the code exactly as shown:
               </Text>
 
-              {/* Distorted captcha display */}
               <View style={[styles.captchaDisplay, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                 {captchaCode.split('').map((char, i) => (
                   <Text
@@ -371,7 +333,6 @@ export default function PlayScreen() {
                     {char}
                   </Text>
                 ))}
-                {/* Noise lines */}
                 <View style={[styles.noiseLine, { top: '40%', backgroundColor: colors.mutedForeground + '55' }]} />
                 <View style={[styles.noiseLine, { top: '65%', backgroundColor: colors.mutedForeground + '33' }]} />
               </View>
@@ -382,11 +343,9 @@ export default function PlayScreen() {
                   {
                     backgroundColor: colors.input,
                     borderColor:
-                      captchaFeedback === 'correct'
-                        ? colors.success
-                        : captchaFeedback === 'wrong'
-                        ? colors.destructive
-                        : colors.border,
+                      captchaFeedback === 'correct' ? colors.success
+                      : captchaFeedback === 'wrong' ? colors.destructive
+                      : colors.border,
                     color: colors.foreground,
                   },
                 ]}
@@ -408,20 +367,15 @@ export default function PlayScreen() {
                 disabled={captchaInput.length !== CAPTCHA_LENGTH}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.submitBtnText,
-                    { color: captchaInput.length === CAPTCHA_LENGTH ? colors.primaryForeground : colors.mutedForeground },
-                  ]}
-                >
+                <Text style={[
+                  styles.submitBtnText,
+                  { color: captchaInput.length === CAPTCHA_LENGTH ? colors.primaryForeground : colors.mutedForeground },
+                ]}>
                   Submit
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => { setCaptchaCode(generateCaptcha()); setCaptchaInput(''); }}
-                style={styles.refreshRow}
-              >
+              <TouchableOpacity onPress={() => { setCaptchaCode(generateCaptcha()); setCaptchaInput(''); }} style={styles.refreshRow}>
                 <Ionicons name="refresh" size={14} color={colors.mutedForeground} />
                 <Text style={[styles.refreshText, { color: colors.mutedForeground }]}>New code</Text>
               </TouchableOpacity>
@@ -439,12 +393,12 @@ export default function PlayScreen() {
         )}
       </ScrollView>
 
-      <AdModal visible={showQuizAd} onComplete={handleQuizAdComplete} onDismiss={() => setShowQuizAd(false)} />
       <AdModal
-        visible={showCaptchaAd}
-        onComplete={() => { setShowCaptchaAd(false); }}
-        onDismiss={() => setShowCaptchaAd(false)}
+        visible={showQuizAd}
+        onComplete={() => { setShowQuizAd(false); setSelectedOption(null); setQuizState('question'); setTimeLeft(QUESTION_SECONDS); }}
+        onDismiss={() => setShowQuizAd(false)}
       />
+      <AdModal visible={showCaptchaAd} onComplete={() => setShowCaptchaAd(false)} onDismiss={() => setShowCaptchaAd(false)} />
       <TokenModal visible={showTokenModal} tokens={5} onClose={() => setShowTokenModal(false)} />
       <TokenModal visible={showCaptchaToken} tokens={20} onClose={() => setShowCaptchaToken(false)} />
     </View>
@@ -463,13 +417,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1,
   },
   scoreText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  toggle: {
-    flexDirection: 'row', margin: 16, borderRadius: 12, padding: 4,
-  },
-  toggleBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 10, gap: 6,
-  },
+  toggle: { flexDirection: 'row', margin: 16, borderRadius: 12, padding: 4 },
+  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, gap: 6 },
   toggleText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, gap: 12 },
@@ -477,33 +426,18 @@ const styles = StyleSheet.create({
   quizTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   qNumLabel: { fontSize: 13, fontFamily: 'Inter_500Medium' },
   timerCircle: { position: 'relative' },
-  timerCenter: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  timerCenter: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   timerNum: { fontSize: 16, fontFamily: 'Inter_700Bold' },
   questionText: { fontSize: 17, fontFamily: 'Inter_600SemiBold', lineHeight: 24 },
   optionsGrid: { gap: 10 },
-  optionBtn: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 14,
-    borderWidth: 1.5, padding: 14, gap: 12,
-  },
-  optionIndex: {
-    width: 30, height: 30, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  optionBtn: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 12 },
+  optionIndex: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   optionIndexText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   optionText: { flex: 1, fontSize: 15, fontFamily: 'Inter_500Medium' },
-  feedbackCard: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 16,
-    borderWidth: 1, padding: 14, gap: 12,
-  },
+  feedbackCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, borderWidth: 1, padding: 14, gap: 12 },
   feedbackTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   feedbackSub: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  nextBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, gap: 4,
-  },
+  nextBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, gap: 4 },
   nextBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   captchaHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   captchaProgress: { flex: 1, gap: 6 },
@@ -515,22 +449,14 @@ const styles = StyleSheet.create({
   captchaInstructions: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   captchaDisplay: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 4, borderRadius: 14, borderWidth: 1, paddingVertical: 20, paddingHorizontal: 16,
-    overflow: 'hidden',
+    gap: 4, borderRadius: 14, borderWidth: 1, paddingVertical: 20, paddingHorizontal: 16, overflow: 'hidden',
   },
   captchaChar: { fontSize: 26, fontFamily: 'Inter_700Bold' },
   noiseLine: { position: 'absolute', left: 0, right: 0, height: 1 },
-  captchaInput: {
-    height: 54, borderRadius: 12, borderWidth: 1.5,
-    fontSize: 20, fontFamily: 'Inter_600SemiBold', letterSpacing: 6,
-  },
-  submitBtn: {
-    height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-  },
+  captchaInput: { height: 54, borderRadius: 12, borderWidth: 1.5, fontSize: 20, fontFamily: 'Inter_600SemiBold', letterSpacing: 6 },
+  submitBtn: { height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   submitBtnText: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  refreshRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-  },
+  refreshRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   refreshText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   infoText: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, flex: 1 },

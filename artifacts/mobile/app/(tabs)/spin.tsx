@@ -18,50 +18,38 @@ import TokenModal from '@/components/TokenModal';
 export default function SpinScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { awardTokens, recordSpin, dailySpinsUsed, maxFreeSpins } = useApp();
+  const { awardTokens, recordSpin, dailySpinsUsed, maxFreeSpins, requireAuth, user } = useApp();
 
   const [showAdModal, setShowAdModal] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [wonTokens, setWonTokens] = useState(0);
   const [spinResult, setSpinResult] = useState<{ tokens: number; label: string } | null>(null);
-  // After watching an ad, the user gets one extra spin
   const [adGrantedSpin, setAdGrantedSpin] = useState(false);
 
   const freeSpinsLeft = Math.max(0, maxFreeSpins - dailySpinsUsed);
-  // requiresAd when no free spins AND no ad-granted spin is pending
   const requiresAd = freeSpinsLeft === 0 && !adGrantedSpin;
-  const canSpin = freeSpinsLeft > 0 || adGrantedSpin;
 
   const handleSpinComplete = async (tokens: number, label: string) => {
-    // Consume ad-granted spin if it was used
-    if (adGrantedSpin) {
-      setAdGrantedSpin(false);
-    }
+    if (adGrantedSpin) setAdGrantedSpin(false);
     await recordSpin();
-    if (tokens > 0) {
-      await awardTokens(tokens);
-    }
+    if (tokens > 0) await awardTokens(tokens);
     setWonTokens(tokens);
-    if (tokens > 0) {
-      setShowTokenModal(true);
-    } else {
-      setSpinResult({ tokens, label });
-    }
+    if (tokens > 0) setShowTokenModal(true);
+    else setSpinResult({ tokens, label });
   };
 
   const handleAdRequired = () => {
-    setShowAdModal(true);
+    // requireAuth gates this too — if somehow called without auth, protect it
+    requireAuth(() => setShowAdModal(true));
   };
 
   const handleAdComplete = () => {
     setShowAdModal(false);
-    // Grant one ad-backed spin
     setAdGrantedSpin(true);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View
         style={[
           styles.header,
@@ -75,9 +63,7 @@ export default function SpinScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Spin the Wheel</Text>
         <View style={[styles.spinsBadge, { backgroundColor: colors.gold + '22', borderColor: colors.gold + '44' }]}>
           <MaterialCommunityIcons name="refresh-circle" size={16} color={colors.gold} />
-          <Text style={[styles.spinsText, { color: colors.gold }]}>
-            {freeSpinsLeft} free left
-          </Text>
+          <Text style={[styles.spinsText, { color: colors.gold }]}>{freeSpinsLeft} free left</Text>
         </View>
       </View>
 
@@ -86,51 +72,51 @@ export default function SpinScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Spins status */}
+        {/* Daily spin indicator */}
         <View style={[styles.spinsBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {Array.from({ length: maxFreeSpins }).map((_, i) => (
             <View
               key={i}
               style={[
                 styles.spinDot,
-                {
-                  backgroundColor: i < dailySpinsUsed ? colors.muted : colors.gold,
-                  borderColor: i < dailySpinsUsed ? colors.border : colors.gold,
-                },
+                { backgroundColor: i < dailySpinsUsed ? colors.muted : colors.gold, borderColor: i < dailySpinsUsed ? colors.border : colors.gold },
               ]}
             />
           ))}
-          {adGrantedSpin && (
-            <View style={[styles.adSpinDot, { backgroundColor: colors.accent, borderColor: colors.accent }]} />
-          )}
+          {adGrantedSpin && <View style={[styles.spinDot, { backgroundColor: colors.accent, borderColor: colors.accent }]} />}
           <Text style={[styles.spinsStatus, { color: colors.mutedForeground }]}>
             {adGrantedSpin
-              ? 'Ad-granted spin ready — go for it!'
+              ? 'Ad-granted spin ready!'
               : freeSpinsLeft > 0
-              ? `${freeSpinsLeft} free spin${freeSpinsLeft !== 1 ? 's' : ''} remaining today`
+              ? `${freeSpinsLeft} free spin${freeSpinsLeft !== 1 ? 's' : ''} today`
               : 'Watch a video for an extra spin'}
           </Text>
         </View>
 
-        {/* Wheel */}
+        {/* Wheel — transparent overlay gates auth when user is not signed in */}
         <View style={[styles.wheelSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SpinWheel
             onSpinComplete={handleSpinComplete}
-            canSpin={canSpin}
+            canSpin={freeSpinsLeft > 0 || adGrantedSpin}
             requiresAd={requiresAd}
             onAdRequired={handleAdRequired}
           />
+          {/* Auth overlay: intercepts the first tap when not logged in */}
+          {!user && (
+            <TouchableOpacity
+              style={[styles.authOverlay, { backgroundColor: 'transparent' }]}
+              onPress={() => requireAuth(() => {})}
+              activeOpacity={1}
+            />
+          )}
         </View>
 
-        {/* Prize result (Try Tomorrow) */}
         {spinResult && spinResult.tokens === 0 && (
           <View style={[styles.resultCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
             <Ionicons name="time-outline" size={24} color={colors.mutedForeground} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.resultTitle, { color: colors.foreground }]}>Try Tomorrow!</Text>
-              <Text style={[styles.resultSub, { color: colors.mutedForeground }]}>
-                No tokens this time. Spin again tomorrow for more chances.
-              </Text>
+              <Text style={[styles.resultSub, { color: colors.mutedForeground }]}>Spin again tomorrow for more chances.</Text>
             </View>
             <TouchableOpacity onPress={() => setSpinResult(null)}>
               <Ionicons name="close" size={20} color={colors.mutedForeground} />
@@ -138,7 +124,6 @@ export default function SpinScreen() {
           </View>
         )}
 
-        {/* Prize legend */}
         <View style={[styles.legend, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.legendTitle, { color: colors.mutedForeground }]}>PRIZE TABLE</Text>
           <View style={styles.legendGrid}>
@@ -161,21 +146,13 @@ export default function SpinScreen() {
         <View style={[styles.rulesCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
           <Text style={[styles.rulesText, { color: colors.mutedForeground }]}>
-            3 free spins reset at midnight. Watch a video to earn one additional spin.
+            3 free spins reset at midnight. Watch a video to earn one extra spin.
           </Text>
         </View>
       </ScrollView>
 
-      <AdModal
-        visible={showAdModal}
-        onComplete={handleAdComplete}
-        onDismiss={() => setShowAdModal(false)}
-      />
-      <TokenModal
-        visible={showTokenModal}
-        tokens={wonTokens}
-        onClose={() => setShowTokenModal(false)}
-      />
+      <AdModal visible={showAdModal} onComplete={handleAdComplete} onDismiss={() => setShowAdModal(false)} />
+      <TokenModal visible={showTokenModal} tokens={wonTokens} onClose={() => setShowTokenModal(false)} />
     </View>
   );
 }
@@ -199,11 +176,16 @@ const styles = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, padding: 14, gap: 8,
   },
   spinDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-  adSpinDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
   spinsStatus: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
   wheelSection: {
     width: '100%', borderRadius: 24, borderWidth: 1,
     padding: 24, alignItems: 'center',
+    // Needed for the auth overlay to be positioned correctly
+    position: 'relative',
+  },
+  authOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 24,
   },
   resultCard: {
     width: '100%', flexDirection: 'row', alignItems: 'center',
