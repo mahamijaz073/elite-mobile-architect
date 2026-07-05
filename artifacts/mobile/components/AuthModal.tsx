@@ -34,6 +34,12 @@ import { useColors } from '@/hooks/useColors';
 
 type Screen = 'main' | 'phone' | 'otp';
 
+const DOMAIN_ERROR_MSG =
+  'This domain is not authorised in Firebase.\n\n' +
+  'Go to Firebase Console → Authentication → Settings → Authorized domains → Add domain:\n\n' +
+  '87d13cd3-64e1-479b-9d55-3eedf76f65ee-00-uvl2h3r1yhk4.sisko.replit.dev\n\n' +
+  'Then try again. Guest access below works immediately without this step.';
+
 interface AuthModalProps {
   visible: boolean;
   /** Called right after Firebase confirms the user is signed in. */
@@ -85,7 +91,11 @@ export default function AuthModal({ visible, onSuccess, onDismiss }: AuthModalPr
       await signInWithPopup(auth, provider);
       handleSuccess();
     } catch (e: any) {
-      setError(e?.message ?? 'Google sign-in failed.');
+      if (e?.code === 'auth/unauthorized-domain') {
+        setError(DOMAIN_ERROR_MSG);
+      } else {
+        setError(e?.message ?? 'Google sign-in failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -109,7 +119,11 @@ export default function AuthModal({ visible, onSuccess, onDismiss }: AuthModalPr
       confirmationRef.current = await signInWithPhoneNumber(auth, phone.trim(), verifier);
       setScreen('otp');
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to send OTP. Check number format (+923001234567).');
+      if (e?.code === 'auth/unauthorized-domain') {
+        setError(DOMAIN_ERROR_MSG);
+      } else {
+        setError(e?.message ?? 'Failed to send OTP. Check number format (+923001234567).');
+      }
     } finally {
       setLoading(false);
     }
@@ -138,7 +152,11 @@ export default function AuthModal({ visible, onSuccess, onDismiss }: AuthModalPr
       await signInAnonymously(auth);
       handleSuccess();
     } catch (e: any) {
-      setError(e?.message ?? 'Could not sign in anonymously.');
+      if (e?.code === 'auth/unauthorized-domain') {
+        setError(DOMAIN_ERROR_MSG);
+      } else {
+        setError(e?.message ?? 'Could not sign in anonymously.');
+      }
     } finally {
       setLoading(false);
     }
