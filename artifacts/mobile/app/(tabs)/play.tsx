@@ -19,7 +19,7 @@ import AdModal from '@/components/AdModal';
 import TokenModal from '@/components/TokenModal';
 
 type Mode = 'quiz' | 'captcha';
-type QuizState = 'question' | 'correct' | 'wrong';
+type QuizState = 'ready' | 'question' | 'correct' | 'wrong';
 
 const QUESTION_SECONDS = 15;
 const CAPTCHA_LENGTH = 6;
@@ -45,7 +45,7 @@ export default function PlayScreen() {
   // Quiz
   const [questions] = useState(shuffleQuestions);
   const [qIndex, setQIndex] = useState(0);
-  const [quizState, setQuizState] = useState<QuizState>('question');
+  const [quizState, setQuizState] = useState<QuizState>('ready');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(QUESTION_SECONDS);
   const [showQuizAd, setShowQuizAd] = useState(false);
@@ -62,11 +62,10 @@ export default function PlayScreen() {
 
   const currentQuestion = questions[qIndex % questions.length];
 
-  // Quiz timer
+  // Quiz timer — only runs once the player taps "Start"
   useEffect(() => {
     if (mode !== 'quiz' || quizState !== 'question') return;
     if (timerRef.current) clearInterval(timerRef.current);
-    setTimeLeft(QUESTION_SECONDS);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -79,6 +78,11 @@ export default function PlayScreen() {
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [qIndex, mode, quizState]);
+
+  const startQuestion = () => {
+    setTimeLeft(QUESTION_SECONDS);
+    setQuizState('question');
+  };
 
   const doSelectOption = async (index: number) => {
     if (quizState !== 'question') return;
@@ -104,7 +108,7 @@ export default function PlayScreen() {
   const nextQuestion = () => {
     setQIndex(prev => prev + 1);
     setSelectedOption(null);
-    setQuizState('question');
+    setQuizState('ready');
     setTimeLeft(QUESTION_SECONDS);
   };
 
@@ -223,39 +227,56 @@ export default function PlayScreen() {
                     />
                   </Svg>
                   <View style={styles.timerCenter}>
-                    <Text style={[styles.timerNum, { color: timeLeft <= 5 ? colors.destructive : colors.foreground }]}>
-                      {timeLeft}
-                    </Text>
+                    {quizState === 'ready' ? (
+                      <Ionicons name="hourglass-outline" size={18} color={colors.mutedForeground} />
+                    ) : (
+                      <Text style={[styles.timerNum, { color: timeLeft <= 5 ? colors.destructive : colors.foreground }]}>
+                        {timeLeft}
+                      </Text>
+                    )}
                   </View>
                 </View>
               </View>
               <Text style={[styles.questionText, { color: colors.foreground }]}>{currentQuestion.question}</Text>
             </View>
 
-            <View style={styles.optionsGrid}>
-              {currentQuestion.options.map((opt, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.optionBtn, { backgroundColor: optionBg(i), borderColor: optionBorder(i) }]}
-                  onPress={() => handleOptionSelect(i)}
-                  disabled={quizState !== 'question'}
-                  activeOpacity={0.75}
-                >
-                  <View style={[styles.optionIndex, { backgroundColor: colors.muted }]}>
-                    <Text style={[styles.optionIndexText, { color: colors.mutedForeground }]}>
-                      {['A', 'B', 'C', 'D'][i]}
-                    </Text>
-                  </View>
-                  <Text style={[styles.optionText, { color: colors.foreground }]}>{opt}</Text>
-                  {quizState !== 'question' && i === currentQuestion.correct_option_index && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                  )}
-                  {quizState !== 'question' && i === selectedOption && i !== currentQuestion.correct_option_index && (
-                    <Ionicons name="close-circle" size={20} color={colors.destructive} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+            {quizState === 'ready' ? (
+              <TouchableOpacity
+                style={[styles.startBtn, { backgroundColor: colors.gold }]}
+                onPress={startQuestion}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="play" size={18} color={colors.primaryForeground} />
+                <Text style={[styles.startBtnText, { color: colors.primaryForeground }]}>
+                  Start Question ({QUESTION_SECONDS}s)
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.optionsGrid}>
+                {currentQuestion.options.map((opt, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.optionBtn, { backgroundColor: optionBg(i), borderColor: optionBorder(i) }]}
+                    onPress={() => handleOptionSelect(i)}
+                    disabled={quizState !== 'question'}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.optionIndex, { backgroundColor: colors.muted }]}>
+                      <Text style={[styles.optionIndexText, { color: colors.mutedForeground }]}>
+                        {['A', 'B', 'C', 'D'][i]}
+                      </Text>
+                    </View>
+                    <Text style={[styles.optionText, { color: colors.foreground }]}>{opt}</Text>
+                    {quizState !== 'question' && i === currentQuestion.correct_option_index && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                    )}
+                    {quizState !== 'question' && i === selectedOption && i !== currentQuestion.correct_option_index && (
+                      <Ionicons name="close-circle" size={20} color={colors.destructive} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             {quizState === 'correct' && (
               <View style={[styles.feedbackCard, { backgroundColor: colors.success + '22', borderColor: colors.success }]}>
@@ -429,6 +450,11 @@ const styles = StyleSheet.create({
   timerCenter: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   timerNum: { fontSize: 16, fontFamily: 'Inter_700Bold' },
   questionText: { fontSize: 17, fontFamily: 'Inter_600SemiBold', lineHeight: 24 },
+  startBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 14, paddingVertical: 16, gap: 8,
+  },
+  startBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   optionsGrid: { gap: 10 },
   optionBtn: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 12 },
   optionIndex: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },

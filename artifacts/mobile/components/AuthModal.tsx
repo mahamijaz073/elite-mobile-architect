@@ -34,11 +34,18 @@ import { useColors } from '@/hooks/useColors';
 
 type Screen = 'main' | 'phone' | 'otp';
 
-const DOMAIN_ERROR_MSG =
-  'This domain is not authorised in Firebase.\n\n' +
-  'Go to Firebase Console → Authentication → Settings → Authorized domains → Add domain:\n\n' +
-  '87d13cd3-64e1-479b-9d55-3eedf76f65ee-00-uvl2h3r1yhk4.sisko.replit.dev\n\n' +
-  'Then try again. Guest access below works immediately without this step.';
+function getDomainErrorMsg(): string {
+  const currentDomain =
+    Platform.OS === 'web' && typeof window !== 'undefined' && window.location
+      ? window.location.hostname
+      : 'your-repl-domain.replit.dev';
+  return (
+    'This domain is not authorised in Firebase.\n\n' +
+    'Go to Firebase Console → Authentication → Settings → Authorized domains → Add domain:\n\n' +
+    `${currentDomain}\n\n` +
+    'Then try again. Guest access below works immediately without this step.'
+  );
+}
 
 interface AuthModalProps {
   visible: boolean;
@@ -92,7 +99,7 @@ export default function AuthModal({ visible, onSuccess, onDismiss }: AuthModalPr
       handleSuccess();
     } catch (e: any) {
       if (e?.code === 'auth/unauthorized-domain') {
-        setError(DOMAIN_ERROR_MSG);
+        setError(getDomainErrorMsg());
       } else {
         setError(e?.message ?? 'Google sign-in failed.');
       }
@@ -120,7 +127,7 @@ export default function AuthModal({ visible, onSuccess, onDismiss }: AuthModalPr
       setScreen('otp');
     } catch (e: any) {
       if (e?.code === 'auth/unauthorized-domain') {
-        setError(DOMAIN_ERROR_MSG);
+        setError(getDomainErrorMsg());
       } else {
         setError(e?.message ?? 'Failed to send OTP. Check number format (+923001234567).');
       }
@@ -153,7 +160,7 @@ export default function AuthModal({ visible, onSuccess, onDismiss }: AuthModalPr
       handleSuccess();
     } catch (e: any) {
       if (e?.code === 'auth/unauthorized-domain') {
-        setError(DOMAIN_ERROR_MSG);
+        setError(getDomainErrorMsg());
       } else {
         setError(e?.message ?? 'Could not sign in anonymously.');
       }
