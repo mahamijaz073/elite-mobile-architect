@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from '@/context/AppContext';
 import AuthModal from '@/components/AuthModal';
 
@@ -40,6 +41,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
+      <StatusBar style="dark" />
       <GlobalAuthModal />
     </>
   );
