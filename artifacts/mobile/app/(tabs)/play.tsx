@@ -22,6 +22,7 @@ type Mode = 'quiz' | 'captcha';
 type QuizState = 'ready' | 'question' | 'correct' | 'wrong';
 
 const QUESTION_SECONDS = 15;
+const PHASE_SIZE = 15;
 const CAPTCHA_LENGTH = 6;
 const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -61,6 +62,10 @@ export default function PlayScreen() {
   const [showCaptchaAd, setShowCaptchaAd] = useState(false);
 
   const currentQuestion = questions[qIndex % questions.length];
+  const currentQPos = qIndex % questions.length;
+  const phaseStart = Math.floor(currentQPos / PHASE_SIZE) * PHASE_SIZE;
+  const phaseSizeActual = Math.min(PHASE_SIZE, questions.length - phaseStart);
+  const posInPhase = currentQPos - phaseStart + 1;
 
   // Quiz timer — only runs once the player taps "Start"
   useEffect(() => {
@@ -212,7 +217,7 @@ export default function PlayScreen() {
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.quizTopRow}>
                 <Text style={[styles.qNumLabel, { color: colors.mutedForeground }]}>
-                  Q{(qIndex % questions.length) + 1} of {questions.length}
+                  Q{posInPhase} of {phaseSizeActual}
                 </Text>
                 <View style={styles.timerCircle}>
                   <Svg width={52} height={52}>
