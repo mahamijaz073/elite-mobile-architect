@@ -22,16 +22,18 @@ export interface User {
 interface AppContextType {
   user: User | null;
   isLoading: boolean;
+  /** True when Firebase is unreachable and the app fell back to offline mode. */
+  isOffline: boolean;
   tokens: number;
   tickets: number;
   secondsUntilAdReady: number;
   canWatchAd: boolean;
-  adsWatchedThisHour: number;
-  maxAdsPerHour: number;
   isPoolLocked: boolean;
   dailySpinsUsed: number;
   maxFreeSpins: number;
   captchaStreak: number;
+  /** Current token value in Pakistani Rupees (admin-adjustable). */
+  tokenPriceRs: number;
   /** Show the auth modal and, once signed in, run `action`. */
   requireAuth: (action: () => void) => void;
   authModalVisible: boolean;
@@ -47,12 +49,23 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-const AD_COOLDOWN_SECONDS = 3600; // 60 minutes — 1 video per hour
-const MAX_ADS_PER_HOUR = 24; // no practical daily cap
+/** 20-minute cooldown between ad watches */
+const AD_COOLDOWN_SECONDS = 1200;
 const MAX_FREE_SPINS = 3;
-const TOKENS_PER_AD = 25;
+/** Tokens awarded per ad watch */
+const TOKENS_PER_AD = 360;
 const TOKENS_PER_CAPTCHA_SET = 12;
 const CAPTCHA_SET_SIZE = 5;
+const DEFAULT_TOKEN_PRICE_RS = 1.1;
+
+/**
+ * How long (ms) we wait for Firebase's first auth state emission before
+ * giving up and proceeding in offline / guest mode.
+ */
+const AUTH_TIMEOUT_MS = 8_000;
+
+/** AsyncStorage key where we cache the last known user for instant restore. */
+const CACHED_USER_KEY = 'cachedUser';
 
 function getTodayKey(): string {
   return new Date().toISOString().split('T')[0];
@@ -67,9 +80,26 @@ function makeInitials(displayName: string | null, phone: string | null): string 
   return 'QP';
 }
 
+/** Fetch the current token price from the API. Returns DEFAULT_TOKEN_PRICE_RS on any error. */
+async function fetchTokenPrice(): Promise<number> {
+  try {
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    if (!domain) return DEFAULT_TOKEN_PRICE_RS;
+    const res = await fetch(`https://${domain}/api/config/token-price`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return DEFAULT_TOKEN_PRICE_RS;
+    const data = await res.json() as { tokenPriceRs?: number };
+    return typeof data.tokenPriceRs === 'number' && data.tokenPriceRs > 0
+      ? data.tokenPriceRs
+      : DEFAULT_TOKEN_PRICE_RS;
+  } catch {
+    return DEFAULT_TOKEN_PRICE_RS;
+  }
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Lazy-auth modal
   const [authModalVisible, setAuthModalVisible] = useState(false);
@@ -79,48 +109,97 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [tokens, setTokens] = useState(0);
   const [tickets, setTickets] = useState(0);
   const [lastAdWatchedAt, setLastAdWatchedAt] = useState(0);
-  const [adLog, setAdLog] = useState<number[]>([]);
   const [isPoolLocked, setIsPoolLocked] = useState(false);
   const [dailySpinsUsed, setDailySpinsUsed] = useState(0);
   const [captchaStreak, setCaptchaStreak] = useState(0);
   const [secondsUntilAdReady, setSecondsUntilAdReady] = useState(0);
+  const [tokenPriceRs, setTokenPriceRs] = useState(DEFAULT_TOKEN_PRICE_RS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Firebase Auth listener ─────────────────────────────────────
+  // ── Firebase Auth listener with offline timeout ────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, firebaseUser => {
-      if (firebaseUser) {
-        setUser({
-          uid: firebaseUser.uid,
-          name:
-            firebaseUser.displayName ??
-            firebaseUser.phoneNumber ??
-            (firebaseUser.isAnonymous ? 'Guest Player' : 'Player'),
-          email: firebaseUser.email ?? '',
-          avatarInitials: makeInitials(firebaseUser.displayName, firebaseUser.phoneNumber),
-          isAnonymous: firebaseUser.isAnonymous,
-        });
-      } else {
-        setUser(null);
+    let resolved = false;
+    let cancelled = false;
+
+    // Step 1: immediately restore cached user so the UI isn't blank while
+    // we wait for Firebase. Returning users can interact right away.
+    AsyncStorage.getItem(CACHED_USER_KEY).then(raw => {
+      if (cancelled || !raw) return;
+      try {
+        const cached: User = JSON.parse(raw);
+        if (!cancelled) setUser(cached);
+      } catch {
+        // corrupted cache — ignore
       }
-      setIsLoading(false);
     });
-    return unsubscribe;
+
+    // Step 2: start the Firebase auth listener
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      firebaseUser => {
+        if (cancelled) return;
+        resolved = true;
+        if (firebaseUser) {
+          const appUser: User = {
+            uid: firebaseUser.uid,
+            name:
+              firebaseUser.displayName ??
+              firebaseUser.phoneNumber ??
+              (firebaseUser.isAnonymous ? 'Guest Player' : 'Player'),
+            email: firebaseUser.email ?? '',
+            avatarInitials: makeInitials(firebaseUser.displayName, firebaseUser.phoneNumber),
+            isAnonymous: firebaseUser.isAnonymous,
+          };
+          setUser(appUser);
+          AsyncStorage.setItem(CACHED_USER_KEY, JSON.stringify(appUser)).catch(() => {});
+        } else {
+          setUser(null);
+          AsyncStorage.removeItem(CACHED_USER_KEY).catch(() => {});
+        }
+        setIsOffline(false);
+        setIsLoading(false);
+      },
+      _error => {
+        if (cancelled) return;
+        resolved = true;
+        setIsOffline(true);
+        setIsLoading(false);
+      },
+    );
+
+    // Step 3: safety-net timeout
+    const timeoutId = setTimeout(() => {
+      if (!resolved && !cancelled) {
+        resolved = true;
+        setIsOffline(true);
+        setIsLoading(false);
+      }
+    }, AUTH_TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // ── Fetch token price from API on mount ───────────────────────
+  useEffect(() => {
+    fetchTokenPrice().then(price => setTokenPriceRs(price));
   }, []);
 
   // ── Persist token economy ──────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
-        const [tokensStr, ticketsStr, lastAdStr, adLogStr, poolStr, spinStr, captchaStr] =
+        const [tokensStr, ticketsStr, lastAdStr, poolStr, spinStr, captchaStr] =
           await AsyncStorage.multiGet([
             'tokens', 'tickets', 'lastAdWatchedAt',
-            'adLog', 'isPoolLocked', 'spinData', 'captchaStreak',
+            'isPoolLocked', 'spinData', 'captchaStreak',
           ]);
         if (tokensStr[1]) setTokens(parseInt(tokensStr[1], 10));
         if (ticketsStr[1]) setTickets(parseInt(ticketsStr[1], 10));
         if (lastAdStr[1]) setLastAdWatchedAt(parseInt(lastAdStr[1], 10));
-        if (adLogStr[1]) setAdLog(JSON.parse(adLogStr[1]));
         if (poolStr[1]) setIsPoolLocked(poolStr[1] === 'true');
         if (captchaStr[1]) setCaptchaStreak(parseInt(captchaStr[1], 10));
         if (spinStr[1]) {
@@ -142,8 +221,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [lastAdWatchedAt]);
 
-  const adsWatchedThisHour = adLog.filter(t => Date.now() - t < 3_600_000).length;
-  const canWatchAd = secondsUntilAdReady === 0 && adsWatchedThisHour < MAX_ADS_PER_HOUR;
+  const canWatchAd = secondsUntilAdReady === 0;
 
   // ── Lazy auth ──────────────────────────────────────────────────
   const requireAuth = useCallback(
@@ -173,7 +251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Actions ────────────────────────────────────────────────────
   const logout = async () => {
     await signOut(auth);
-    // onAuthStateChanged will set user = null
+    await AsyncStorage.removeItem(CACHED_USER_KEY);
   };
 
   const awardTokens = async (amount: number) => {
@@ -187,9 +265,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const now = Date.now();
     setLastAdWatchedAt(now);
     await AsyncStorage.setItem('lastAdWatchedAt', now.toString());
-    const newLog = [...adLog.filter(t => Date.now() - t < 3_600_000), now];
-    setAdLog(newLog);
-    await AsyncStorage.setItem('adLog', JSON.stringify(newLog));
   };
 
   const onAdWatched = async (): Promise<{ poolLocked: boolean }> => {
@@ -223,16 +298,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isLoading,
+        isOffline,
         tokens,
         tickets,
         secondsUntilAdReady,
         canWatchAd,
-        adsWatchedThisHour,
-        maxAdsPerHour: MAX_ADS_PER_HOUR,
         isPoolLocked,
         dailySpinsUsed,
         maxFreeSpins: MAX_FREE_SPINS,
         captchaStreak,
+        tokenPriceRs,
         requireAuth,
         authModalVisible,
         onAuthComplete,

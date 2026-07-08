@@ -17,6 +17,10 @@ import CountdownTimer from '@/components/CountdownTimer';
 import AdModal from '@/components/AdModal';
 import TokenModal from '@/components/TokenModal';
 
+/** Cooldown in seconds — must match AppContext constant */
+const AD_COOLDOWN_SECONDS = 1200; // 20 minutes
+const TOKENS_PER_AD = 360;
+
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -25,6 +29,7 @@ export default function DashboardScreen() {
     user, tokens, tickets,
     secondsUntilAdReady, canWatchAd,
     isPoolLocked, onAdWatched, requireAuth,
+    tokenPriceRs,
   } = useApp();
 
   const [showAd, setShowAd] = useState(false);
@@ -46,6 +51,7 @@ export default function DashboardScreen() {
   };
 
   const timerSize = width < 380 ? 100 : 130;
+  const earnedRs = (TOKENS_PER_AD * tokenPriceRs).toFixed(2);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -97,23 +103,37 @@ export default function DashboardScreen() {
 
         <WalletCard tokens={tokens} tickets={tickets} />
 
-        {/* 1-hour video timer section */}
+        {/* Video reward timer */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Video Reward Timer</Text>
           <Text style={[styles.sectionSubtitle, { color: colors.mutedForeground }]}>
-            Watch 1 video per hour — no daily limit. Earn 25 tokens each time.
+            Watch 1 video every 20 minutes — unlimited per day.
           </Text>
 
           <View style={styles.timerRow}>
-            <CountdownTimer secondsRemaining={secondsUntilAdReady} totalSeconds={3600} size={timerSize} />
+            <CountdownTimer
+              secondsRemaining={secondsUntilAdReady}
+              totalSeconds={AD_COOLDOWN_SECONDS}
+              size={timerSize}
+            />
             <View style={styles.timerInfo}>
               <View style={[styles.infoPill, { backgroundColor: colors.muted }]}>
                 <Ionicons name="time-outline" size={14} color={colors.accent} />
-                <Text style={[styles.infoText, { color: colors.foreground }]} numberOfLines={1}>1 video / hour</Text>
+                <Text style={[styles.infoText, { color: colors.foreground }]} numberOfLines={1}>
+                  1 video / 20 min
+                </Text>
               </View>
               <View style={[styles.infoPill, { backgroundColor: colors.muted }]}>
                 <MaterialCommunityIcons name="lightning-bolt" size={14} color={colors.success} />
-                <Text style={[styles.infoText, { color: colors.foreground }]} numberOfLines={1}>+25 tokens</Text>
+                <Text style={[styles.infoText, { color: colors.foreground }]} numberOfLines={1}>
+                  +{TOKENS_PER_AD.toLocaleString()} tokens
+                </Text>
+              </View>
+              <View style={[styles.infoPill, { backgroundColor: colors.gold + '18', borderColor: colors.gold + '33' }]}>
+                <MaterialCommunityIcons name="currency-usd" size={14} color={colors.gold} />
+                <Text style={[styles.infoText, { color: colors.gold }]} numberOfLines={1}>
+                  ≈ Rs. {earnedRs} per ad
+                </Text>
               </View>
             </View>
           </View>
@@ -132,7 +152,7 @@ export default function DashboardScreen() {
               color={canWatchAd ? colors.primaryForeground : colors.mutedForeground}
             />
             <Text style={[styles.watchBtnText, { color: canWatchAd ? colors.primaryForeground : colors.mutedForeground }]}>
-              Watch Video & Claim Tokens
+              {canWatchAd ? 'Watch Video & Claim Tokens' : 'Cooldown active…'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -160,11 +180,11 @@ export default function DashboardScreen() {
       </ScrollView>
 
       <AdModal visible={showAd} onComplete={handleAdComplete} onDismiss={() => setShowAd(false)} />
-      <TokenModal visible={showToken} tokens={50} onClose={() => setShowToken(false)} />
+      <TokenModal visible={showToken} tokens={TOKENS_PER_AD} onClose={() => setShowToken(false)} />
       <TokenModal
         visible={poolLockedModal}
-        tokens={50}
-        message="Today's prize pool is full! 50 Bonus Tokens added for tomorrow's Mega Draw."
+        tokens={TOKENS_PER_AD}
+        message="Today's prize pool is full! Tokens added for tomorrow's Mega Draw."
         onClose={() => setPoolLockedModal(false)}
       />
     </View>

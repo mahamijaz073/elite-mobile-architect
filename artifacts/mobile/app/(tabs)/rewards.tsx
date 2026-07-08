@@ -14,26 +14,35 @@ import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 
-interface RewardTier {
-  label: string;
-  amount: string;
-  method: string;
-  tokensRequired: number;
-  icon: string;
-  color: string;
-}
-
-const REWARD_TIERS: RewardTier[] = [
-  { label: 'Rs. 500 Gift Voucher', amount: 'Rs. 500', method: 'EasyPaisa', tokensRequired: 5000, icon: 'gift', color: '#2ED573' },
-  { label: 'Rs. 1000 Gift Voucher', amount: 'Rs. 1,000', method: 'JazzCash', tokensRequired: 10000, icon: 'award', color: '#F5C842' },
-];
-
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { tokens, isPoolLocked, requireAuth, user } = useApp();
+  const { tokens, isPoolLocked, requireAuth, user, tokenPriceRs } = useApp();
 
-  const doRedeem = (tier: RewardTier) => {
+  // Compute tier thresholds dynamically from current token price
+  const tier500tokens = Math.ceil(500 / tokenPriceRs);
+  const tier1000tokens = Math.ceil(1000 / tokenPriceRs);
+
+  const REWARD_TIERS = [
+    {
+      label: 'Rs. 500 Gift Voucher',
+      amount: 'Rs. 500',
+      method: 'EasyPaisa',
+      tokensRequired: tier500tokens,
+      icon: 'gift',
+      color: '#2ED573',
+    },
+    {
+      label: 'Rs. 1,000 Gift Voucher',
+      amount: 'Rs. 1,000',
+      method: 'JazzCash',
+      tokensRequired: tier1000tokens,
+      icon: 'award',
+      color: '#F5C842',
+    },
+  ];
+
+  const doRedeem = (tier: typeof REWARD_TIERS[0]) => {
     if (isPoolLocked || tokens < tier.tokensRequired) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
@@ -50,9 +59,12 @@ export default function RewardsScreen() {
     );
   };
 
-  const handleRedeem = (tier: RewardTier) => {
+  const handleRedeem = (tier: typeof REWARD_TIERS[0]) => {
     requireAuth(() => doRedeem(tier));
   };
+
+  const tokenValueStr = tokenPriceRs.toFixed(2);
+  const walletValueRs = (tokens * tokenPriceRs).toFixed(2);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -99,7 +111,7 @@ export default function RewardsScreen() {
           </View>
         )}
 
-        {/* Balance */}
+        {/* Balance card */}
         <View style={[styles.balanceCard, { backgroundColor: colors.card, borderColor: colors.gold + '44' }]}>
           <View style={styles.balanceTop}>
             <View style={{ flex: 1 }}>
@@ -110,13 +122,31 @@ export default function RewardsScreen() {
               <MaterialCommunityIcons name="lightning-bolt" size={28} color={colors.gold} />
             </View>
           </View>
+
+          {/* Token value indicator */}
+          <View style={[styles.valueRow, { backgroundColor: colors.muted, borderRadius: 10 }]}>
+            <MaterialCommunityIcons name="cash" size={14} color={colors.success} />
+            <Text style={[styles.valueText, { color: colors.success }]}>
+              1 token = Rs. {tokenValueStr}  ·  Your wallet ≈ Rs. {walletValueRs}
+            </Text>
+          </View>
+
           <View style={[styles.progressBg, { backgroundColor: colors.muted }]}>
-            <View style={[styles.progressFill, { backgroundColor: colors.gold, width: `${Math.min(100, (tokens / 5000) * 100)}%` }]} />
+            <View
+              style={[styles.progressFill, {
+                backgroundColor: colors.gold,
+                width: `${Math.min(100, (tokens / tier500tokens) * 100)}%`,
+              }]}
+            />
           </View>
           <View style={styles.milestoneRow}>
             <Text style={[styles.milestoneText, { color: colors.mutedForeground }]}>0</Text>
-            <Text style={[styles.milestoneText, { color: colors.mutedForeground }]}>5,000</Text>
-            <Text style={[styles.milestoneText, { color: colors.mutedForeground }]}>10,000</Text>
+            <Text style={[styles.milestoneText, { color: colors.mutedForeground }]}>
+              {tier500tokens.toLocaleString()}
+            </Text>
+            <Text style={[styles.milestoneText, { color: colors.mutedForeground }]}>
+              {tier1000tokens.toLocaleString()}
+            </Text>
           </View>
         </View>
 
@@ -124,7 +154,7 @@ export default function RewardsScreen() {
         <View style={[styles.howCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>How to Redeem</Text>
           {[
-            { step: '1', text: 'Collect tokens by playing, spinning, and watching videos.' },
+            { step: '1', text: 'Earn tokens by watching ads, playing quizzes, and spinning the wheel.' },
             { step: '2', text: 'Sign in, then tap "Redeem Voucher" on a tier below.' },
             { step: '3', text: 'Receive your Gift Voucher via EasyPaisa or JazzCash within 48 hours.' },
           ].map(item => (
@@ -166,12 +196,18 @@ export default function RewardsScreen() {
                   <Text style={[styles.tierLabel, { color: colors.foreground }]} numberOfLines={1}>{tier.label}</Text>
                   <View style={styles.methodRow}>
                     <MaterialCommunityIcons name="bank-outline" size={12} color={colors.mutedForeground} />
-                    <Text style={[styles.methodText, { color: colors.mutedForeground }]} numberOfLines={1}>Via {tier.method}</Text>
+                    <Text style={[styles.methodText, { color: colors.mutedForeground }]} numberOfLines={1}>
+                      Via {tier.method}
+                    </Text>
                   </View>
                 </View>
                 <View style={[styles.costBadge, { backgroundColor: colors.muted }]}>
                   <MaterialCommunityIcons name="lightning-bolt" size={11} color={colors.gold} />
-                  <Text style={[styles.costText, { color: colors.gold }]}>{(tier.tokensRequired / 1000).toFixed(0)}k</Text>
+                  <Text style={[styles.costText, { color: colors.gold }]}>
+                    {tier.tokensRequired >= 1000
+                      ? `${(tier.tokensRequired / 1000).toFixed(1)}k`
+                      : tier.tokensRequired.toString()}
+                  </Text>
                 </View>
               </View>
 
@@ -179,7 +215,11 @@ export default function RewardsScreen() {
                 <View style={[styles.tierProgressFill, { backgroundColor: tier.color, width: `${progress * 100}%` }]} />
               </View>
               <Text style={[styles.tierProgressText, { color: colors.mutedForeground }]} numberOfLines={1}>
-                {canRedeem ? 'Ready to redeem!' : !user ? 'Sign in to redeem' : `${deficit.toLocaleString()} more tokens needed`}
+                {canRedeem
+                  ? 'Ready to redeem!'
+                  : !user
+                  ? 'Sign in to redeem'
+                  : `${deficit.toLocaleString()} more tokens needed`}
               </Text>
 
               <TouchableOpacity
@@ -187,8 +227,17 @@ export default function RewardsScreen() {
                 onPress={() => handleRedeem(tier)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.redeemBtnText, { color: canRedeem ? '#fff' : colors.mutedForeground }]} numberOfLines={1}>
-                  {isPoolLocked ? 'Pool Locked' : !user ? 'Sign In to Redeem' : canRedeem ? 'Redeem Voucher' : 'Not enough tokens'}
+                <Text
+                  style={[styles.redeemBtnText, { color: canRedeem ? '#fff' : colors.mutedForeground }]}
+                  numberOfLines={1}
+                >
+                  {isPoolLocked
+                    ? 'Pool Locked'
+                    : !user
+                    ? 'Sign In to Redeem'
+                    : canRedeem
+                    ? 'Redeem Voucher'
+                    : 'Not enough tokens'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -198,7 +247,7 @@ export default function RewardsScreen() {
         <View style={[styles.disclaimerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="shield-checkmark-outline" size={15} color={colors.accent} />
           <Text style={[styles.disclaimerText, { color: colors.mutedForeground }]}>
-            All Gift Vouchers are processed by our team. Vouchers are awarded for token collection. Terms apply.
+            All Gift Vouchers are processed by our team. Token values may be adjusted by the admin. Terms apply.
           </Text>
         </View>
       </ScrollView>
@@ -230,6 +279,8 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.2 },
   balanceAmount: { fontSize: 36, fontFamily: 'Inter_700Bold', letterSpacing: -1 },
   balanceIcon: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  valueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8 },
+  valueText: { fontSize: 12, fontFamily: 'Inter_500Medium', flexShrink: 1 },
   progressBg: { height: 7, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
   milestoneRow: { flexDirection: 'row', justifyContent: 'space-between' },

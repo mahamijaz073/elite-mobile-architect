@@ -6,7 +6,33 @@ A production-ready Reward & Quiz mobile app built with Expo React Native. Player
 
 - `pnpm --filter @workspace/mobile run dev` — run the Expo dev server (scan QR code in Expo Go to test on device)
 - `pnpm --filter @workspace/api-server run dev` — run the API server
+- `pnpm --filter @workspace/website run dev` — run the QuizBox landing page
 - `pnpm run typecheck` — full typecheck across all packages
+
+## EAS Build (APK)
+
+Build the Android APK using EAS Build. Run these commands from the `artifacts/mobile/` directory:
+
+```bash
+# First time: log in and link the project (do this once)
+npx eas-cli login
+npx eas-cli init          # creates the EAS project and adds projectId to app.json
+
+# Preview APK (sideload / share via link)
+npx eas-cli build --platform android --profile preview
+
+# Production AAB (for Google Play Store)
+npx eas-cli build --platform android --profile production
+```
+
+**Profiles:**
+- `development` — debug APK with dev client (for testing with Expo Dev Client)
+- `preview` — release APK for direct sideload download (share link on website)
+- `production` — AAB bundle for Google Play Store upload
+
+**After `eas init`:** The command adds a `projectId` to `artifacts/mobile/app.json` automatically. Commit that change before building.
+
+**APK download link:** Once a preview build finishes, EAS gives you a shareable download URL. Paste it as the `href` of the download button on the QuizBox website (`artifacts/website/src/`).
 
 ## Stack
 

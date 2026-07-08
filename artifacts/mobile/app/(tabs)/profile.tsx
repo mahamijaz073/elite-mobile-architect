@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useRouter } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
 import { db } from '@/lib/firebase';
@@ -28,6 +29,7 @@ const METHODS: { key: PaymentMethod; label: string; color: string; icon: string 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user, tokens, tickets, requireAuth } = useApp();
 
   const [fullName, setFullName] = useState('');
@@ -227,6 +229,17 @@ export default function ProfileScreen() {
             Make sure your name and account number are correct. Prizes are sent only to the account saved here.
           </Text>
         </View>
+
+        {/* Admin Panel entry — hidden at bottom, no label */}
+        <TouchableOpacity
+          style={[styles.adminBtn, { backgroundColor: '#6C3FE8' + '18', borderColor: '#6C3FE8' + '44' }]}
+          onPress={() => router.push('/admin')}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="shield-crown-outline" size={16} color="#6C3FE8" />
+          <Text style={[styles.adminBtnText, { color: '#6C3FE8' }]}>Admin Panel</Text>
+          <Ionicons name="chevron-forward" size={16} color="#6C3FE8" style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
