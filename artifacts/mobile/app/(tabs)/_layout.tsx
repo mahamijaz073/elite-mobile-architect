@@ -168,7 +168,9 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
+  // NativeTabs (Liquid Glass) is iOS-only — guard explicitly so Android
+  // never attempts to render it, which would crash at runtime.
+  if (Platform.OS === 'ios' && isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;
