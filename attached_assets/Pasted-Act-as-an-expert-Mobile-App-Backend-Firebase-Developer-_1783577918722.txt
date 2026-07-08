@@ -1,0 +1,35 @@
+Act as an expert Mobile App Backend & Firebase Developer. I need to implement a "30-Day Withdrawal Reward Streak & Lifeline System" in my mobile application using Firebase Firestore and Firebase Cloud Functions (Node.js). 
+
+Here are the strict system rules, database requirements, and logic flows that you need to generate code for:
+
+### 1. CORE LOGIC & BUSINESS RULES
+- Withdrawal Lock Period: When a user initiates a withdrawal, a 30-day countdown/streak begins. They only receive real money if they maintain the streak for 30 consecutive days.
+- Daily Task Requirement: The user must watch a minimum of 5 ads every single day.
+- Reset Penalty: If a user fails to watch at least 5 ads in a calendar day, their streak resets back to 0, and the 30-day withdrawal countdown restarts from the beginning.
+- Ad Cooldown: To prevent ad spamming and optimize eCPM, a user cannot watch a consecutive ad within 20 minutes of watching the previous one.
+- Lifeline (Streak Freezer): Users can purchase a "Lifeline" for local currency (via Google Play Billing) to restore or freeze a broken streak. Limit: Maximum 4 lifelines per month, restricted to only 1 purchase per week.
+
+### 2. FIRESTORE DATABASE SCHEMA
+Please design or update the user schema under the `users/{userId}/withdraw_status/active_withdraw` path with these exact fields:
+- `withdraw_initiated`: boolean
+- `timer_start_date`: timestamp (server time)
+- `current_streak_days`: number (0 to 30)
+- `last_ad_watched_at`: timestamp (to enforce the 20-minute cooldown)
+- `ads_watched_today`: number (resets daily)
+- `lifelines_used_this_month`: number (max 4)
+- `last_lifeline_bought_at`: timestamp (to enforce the 1-week cooldown)
+- `status`: string ("pending", "completed", "failed")
+
+### 3. REQUIRED CODE ARTIFACTS
+Please write the clean, production-ready code for the following components:
+
+A. Frontend/Client-Side Verification Logic:
+- Code to check if 20 minutes have passed since `last_ad_watched_at` before allowing the next ad to play. Show a user-friendly countdown timer if they try to watch early.
+
+B. Firebase Cloud Functions (Node.js / TypeScript):
+- Create a Scheduled Cloud Function (Cron Job) that runs daily at 12:00 AM (Midnight) server time.
+- The function must iterate through all active withdrawal documents.
+- If `ads_watched_today` is less than 5, reset `current_streak_days` to 0 (unless a lifeline is active).
+- After the check, automatically reset `ads_watched_today` to 0 for all users to prepare for the next day.
+
+Ensure all Firestore updates use Server Timestamps for security to prevent client-side device time modification or hacking.
