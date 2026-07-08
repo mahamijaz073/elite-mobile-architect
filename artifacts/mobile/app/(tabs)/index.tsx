@@ -21,7 +21,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const {
     user, tokens, tickets,
-    secondsUntilAdReady, canWatchAd, adsWatchedThisHour, maxAdsPerHour,
+    secondsUntilAdReady, canWatchAd,
     isPoolLocked, onAdWatched, requireAuth,
   } = useApp();
 
@@ -44,8 +44,6 @@ export default function DashboardScreen() {
     if (result.poolLocked) setPoolLockedModal(true);
     else setShowToken(true);
   };
-
-  const frequencyReached = adsWatchedThisHour >= maxAdsPerHour;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -97,55 +95,46 @@ export default function DashboardScreen() {
 
         <WalletCard tokens={tokens} tickets={tickets} />
 
-        {/* 20-min timer section */}
+        {/* 1-hour video timer section */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Video Reward Timer</Text>
           <Text style={[styles.sectionSubtitle, { color: colors.mutedForeground }]}>
-            Watch a video every 20 minutes to collect 50 tokens.
+            Watch 1 video per hour — no daily limit. Earn 15 tokens each time.
           </Text>
 
           <View style={styles.timerRow}>
-            <CountdownTimer secondsRemaining={secondsUntilAdReady} totalSeconds={1200} size={140} />
+            <CountdownTimer secondsRemaining={secondsUntilAdReady} totalSeconds={3600} size={140} />
             <View style={styles.timerInfo}>
               <View style={[styles.infoRow, { backgroundColor: colors.muted, borderRadius: 10, padding: 10, gap: 6 }]}>
-                <Ionicons name="film-outline" size={16} color={colors.gold} />
+                <Ionicons name="time-outline" size={16} color={colors.accent} />
                 <Text style={[styles.infoText, { color: colors.foreground }]}>
-                  {adsWatchedThisHour}/{maxAdsPerHour} ads this hour
+                  1 video per hour
                 </Text>
               </View>
               <View style={[styles.infoRow, { backgroundColor: colors.muted, borderRadius: 10, padding: 10, gap: 6 }]}>
                 <MaterialCommunityIcons name="lightning-bolt" size={16} color={colors.success} />
-                <Text style={[styles.infoText, { color: colors.foreground }]}>+50 tokens per view</Text>
+                <Text style={[styles.infoText, { color: colors.foreground }]}>+15 tokens per view</Text>
               </View>
             </View>
           </View>
 
-          {frequencyReached ? (
-            <View style={[styles.warningBanner, { backgroundColor: colors.destructive + '22', borderColor: colors.destructive + '44' }]}>
-              <Ionicons name="warning-outline" size={16} color={colors.destructive} />
-              <Text style={[styles.warningText, { color: colors.destructive }]}>
-                Maximum frequency reached. Please try again after 1 hour.
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.watchBtn,
-                { backgroundColor: canWatchAd ? colors.gold : colors.muted, opacity: canWatchAd ? 1 : 0.6 },
-              ]}
-              onPress={handleWatchAd}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name="play-circle-outline"
-                size={22}
-                color={canWatchAd ? colors.primaryForeground : colors.mutedForeground}
-              />
-              <Text style={[styles.watchBtnText, { color: canWatchAd ? colors.primaryForeground : colors.mutedForeground }]}>
-                Watch Video &amp; Claim Tokens
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[
+              styles.watchBtn,
+              { backgroundColor: canWatchAd ? colors.gold : colors.muted, opacity: canWatchAd ? 1 : 0.6 },
+            ]}
+            onPress={handleWatchAd}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="play-circle-outline"
+              size={22}
+              color={canWatchAd ? colors.primaryForeground : colors.mutedForeground}
+            />
+            <Text style={[styles.watchBtnText, { color: canWatchAd ? colors.primaryForeground : colors.mutedForeground }]}>
+              Watch Video &amp; Claim Tokens
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Module shortcuts */}

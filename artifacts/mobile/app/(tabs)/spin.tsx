@@ -128,10 +128,10 @@ export default function SpinScreen() {
           <Text style={[styles.legendTitle, { color: colors.mutedForeground }]}>PRIZE TABLE</Text>
           <View style={styles.legendGrid}>
             {[
-              { label: '10 Tokens', color: '#F5C842', chance: '25%' },
-              { label: '20 Tokens', color: '#2ED573', chance: '25%' },
-              { label: '50 Tokens', color: '#FF6B35', chance: '12.5%' },
-              { label: '100 Tokens', color: '#FF4757', chance: '12.5%' },
+              { label: '5 Tokens', color: '#F5C842', chance: '25%' },
+              { label: '8 Tokens', color: '#2ED573', chance: '25%' },
+              { label: '20 Tokens', color: '#FF6B35', chance: '12.5%' },
+              { label: '30 Tokens', color: '#FF4757', chance: '12.5%' },
               { label: 'Try Tomorrow', color: '#6C3FE8', chance: '25%' },
             ].map(item => (
               <View key={item.label} style={styles.legendRow}>

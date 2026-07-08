@@ -1325,12 +1325,12 @@ export const FEED_POSTS: Post[] = [
 export const BANNED_WORDS = ['scam', 'fake', 'fraud', 'bakwas', 'chor', 'cheat', 'loot', 'bekar', 'worst', 'pathetic'];
 
 export const SPIN_SEGMENTS = [
-  { label: '10', tokens: 10, color: '#F5C842', textColor: '#0A0A14' },
+  { label: '5', tokens: 5, color: '#F5C842', textColor: '#0A0A14' },
   { label: 'Skip', tokens: 0, color: '#2A1A5E', textColor: '#A090FF' },
-  { label: '20', tokens: 20, color: '#1A3A28', textColor: '#2ED573' },
-  { label: '50', tokens: 50, color: '#FF6B35', textColor: '#FFFFFF' },
-  { label: '10', tokens: 10, color: '#F5C842', textColor: '#0A0A14' },
+  { label: '8', tokens: 8, color: '#1A3A28', textColor: '#2ED573' },
+  { label: '20', tokens: 20, color: '#FF6B35', textColor: '#FFFFFF' },
+  { label: '5', tokens: 5, color: '#F5C842', textColor: '#0A0A14' },
   { label: 'Skip', tokens: 0, color: '#2A1A5E', textColor: '#A090FF' },
-  { label: '100', tokens: 100, color: '#FF4757', textColor: '#FFFFFF' },
-  { label: '20', tokens: 20, color: '#1A3A28', textColor: '#2ED573' },
+  { label: '30', tokens: 30, color: '#FF4757', textColor: '#FFFFFF' },
+  { label: '8', tokens: 8, color: '#1A3A28', textColor: '#2ED573' },
 ];

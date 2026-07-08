@@ -47,11 +47,11 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-const AD_COOLDOWN_SECONDS = 1200; // 20 minutes
-const MAX_ADS_PER_HOUR = 3;
+const AD_COOLDOWN_SECONDS = 3600; // 60 minutes — 1 video per hour
+const MAX_ADS_PER_HOUR = 24; // no practical daily cap
 const MAX_FREE_SPINS = 3;
-const TOKENS_PER_AD = 50;
-const TOKENS_PER_CAPTCHA_SET = 20;
+const TOKENS_PER_AD = 15;
+const TOKENS_PER_CAPTCHA_SET = 8;
 const CAPTCHA_SET_SIZE = 5;
 
 function getTodayKey(): string {
