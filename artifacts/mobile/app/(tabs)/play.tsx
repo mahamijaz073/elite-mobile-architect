@@ -199,7 +199,7 @@ export default function PlayScreen() {
               size={16}
               color={mode === m ? colors.primary : colors.mutedForeground}
             />
-            <Text style={[styles.toggleText, { color: mode === m ? colors.foreground : colors.mutedForeground }]}>
+            <Text style={[styles.toggleText, { color: mode === m ? colors.foreground : colors.mutedForeground }]} numberOfLines={1}>
               {m === 'quiz' ? 'Brain Quiz' : 'Captcha Solver'}
             </Text>
           </TouchableOpacity>
@@ -444,8 +444,8 @@ const styles = StyleSheet.create({
   },
   scoreText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   toggle: { flexDirection: 'row', margin: 16, borderRadius: 12, padding: 4 },
-  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, gap: 6 },
-  toggleText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, gap: 5, overflow: 'hidden' },
+  toggleText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 16, gap: 12 },
   card: { borderRadius: 20, borderWidth: 1, padding: 18, gap: 14 },

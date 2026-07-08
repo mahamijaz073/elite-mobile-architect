@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   metricValue: {
-    fontSize: 32,
+    fontSize: 28,
     fontFamily: 'Inter_700Bold',
     letterSpacing: -0.5,
   },

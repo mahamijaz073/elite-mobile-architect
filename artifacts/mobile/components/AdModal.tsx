@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   phaseTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontFamily: 'Inter_700Bold',
     textAlign: 'center',
   },

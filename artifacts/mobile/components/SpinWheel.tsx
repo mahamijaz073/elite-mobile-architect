@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import Svg, { Path, G, Text as SvgText } from 'react-native-svg';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
@@ -11,9 +11,6 @@ interface SpinWheelProps {
   requiresAd: boolean;
   onAdRequired: () => void;
 }
-
-const WHEEL_SIZE = 260;
-const RADIUS = WHEEL_SIZE / 2;
 const NUM_SEGMENTS = SPIN_SEGMENTS.length;
 const ANGLE_PER_SEGMENT = 360 / NUM_SEGMENTS;
 
@@ -31,6 +28,10 @@ function segmentPath(cx: number, cy: number, r: number, startAngle: number, endA
 
 export default function SpinWheel({ onSpinComplete, canSpin, requiresAd, onAdRequired }: SpinWheelProps) {
   const colors = useColors();
+  const { width: screenWidth } = useWindowDimensions();
+  // Responsive wheel: leave 60px margin (30px each side) for card + scroll padding; min 180 to stay usable
+  const WHEEL_SIZE = Math.max(180, Math.min(260, screenWidth - 60));
+  const RADIUS = WHEEL_SIZE / 2;
   const spinAnim = useRef(new Animated.Value(0)).current;
   const currentRotation = useRef(0);
   const [isSpinning, setIsSpinning] = useState(false);
@@ -104,7 +105,7 @@ export default function SpinWheel({ onSpinComplete, canSpin, requiresAd, onAdReq
                     x={lx}
                     y={ly + 5}
                     fill={seg.textColor}
-                    fontSize={seg.tokens >= 100 ? 13 : 15}
+                    fontSize={WHEEL_SIZE < 200 ? (seg.tokens >= 100 ? 10 : 11) : (seg.tokens >= 100 ? 13 : 15)}
                     fontWeight="bold"
                     textAnchor="middle"
                   >
