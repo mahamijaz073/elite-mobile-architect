@@ -97,7 +97,7 @@ export default function PlayScreen() {
     if (correct) {
       setQuizState('correct');
       setQuizScore(prev => prev + 5);
-      await awardTokens(3);
+      await awardTokens(5);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowTokenModal(true);
     } else {

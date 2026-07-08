@@ -99,7 +99,7 @@ export default function DashboardScreen() {
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Video Reward Timer</Text>
           <Text style={[styles.sectionSubtitle, { color: colors.mutedForeground }]}>
-            Watch 1 video per hour — no daily limit. Earn 15 tokens each time.
+            Watch 1 video per hour — no daily limit. Earn 25 tokens each time.
           </Text>
 
           <View style={styles.timerRow}>
@@ -113,7 +113,7 @@ export default function DashboardScreen() {
               </View>
               <View style={[styles.infoRow, { backgroundColor: colors.muted, borderRadius: 10, padding: 10, gap: 6 }]}>
                 <MaterialCommunityIcons name="lightning-bolt" size={16} color={colors.success} />
-                <Text style={[styles.infoText, { color: colors.foreground }]}>+15 tokens per view</Text>
+                <Text style={[styles.infoText, { color: colors.foreground }]}>+25 tokens per view</Text>
               </View>
             </View>
           </View>
