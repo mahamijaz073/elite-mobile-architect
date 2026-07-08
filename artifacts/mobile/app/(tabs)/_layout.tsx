@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -45,6 +45,9 @@ function ClassicTabLayout() {
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
   const safeAreaInsets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  const tabBarHeight = isWeb ? 56 : 56 + safeAreaInsets.bottom;
 
   return (
     <Tabs
@@ -52,14 +55,27 @@ function ClassicTabLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarShowLabel: width >= 320,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontFamily: 'Inter_500Medium',
+          marginTop: -2,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 0,
+          minWidth: 0,
+        },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: isIOS ? 'transparent' : colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
+          height: tabBarHeight,
           paddingBottom: isWeb ? 0 : safeAreaInsets.bottom,
-          ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -79,11 +95,11 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) =>
+          tabBarIcon: ({ color, size }) =>
             isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={22} />
+              <SymbolView name="house.fill" tintColor={color} size={20} />
             ) : (
-              <Feather name="home" size={22} color={color} />
+              <Feather name="home" size={20} color={color} />
             ),
         }}
       />
@@ -93,9 +109,9 @@ function ClassicTabLayout() {
           title: 'Play',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="gamecontroller.fill" tintColor={color} size={22} />
+              <SymbolView name="gamecontroller.fill" tintColor={color} size={20} />
             ) : (
-              <Ionicons name="game-controller-outline" size={22} color={color} />
+              <Ionicons name="game-controller-outline" size={20} color={color} />
             ),
         }}
       />
@@ -105,9 +121,9 @@ function ClassicTabLayout() {
           title: 'Spin',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="rays" tintColor={color} size={22} />
+              <SymbolView name="rays" tintColor={color} size={20} />
             ) : (
-              <MaterialCommunityIcons name="refresh-circle" size={24} color={color} />
+              <MaterialCommunityIcons name="refresh-circle" size={22} color={color} />
             ),
         }}
       />
@@ -117,9 +133,9 @@ function ClassicTabLayout() {
           title: 'Feed',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="newspaper.fill" tintColor={color} size={22} />
+              <SymbolView name="newspaper.fill" tintColor={color} size={20} />
             ) : (
-              <Feather name="rss" size={22} color={color} />
+              <Feather name="rss" size={20} color={color} />
             ),
         }}
       />
@@ -129,9 +145,9 @@ function ClassicTabLayout() {
           title: 'Rewards',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="gift.fill" tintColor={color} size={22} />
+              <SymbolView name="gift.fill" tintColor={color} size={20} />
             ) : (
-              <Feather name="gift" size={22} color={color} />
+              <Feather name="gift" size={20} color={color} />
             ),
         }}
       />
@@ -141,9 +157,9 @@ function ClassicTabLayout() {
           title: 'Profile',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="person.fill" tintColor={color} size={22} />
+              <SymbolView name="person.fill" tintColor={color} size={20} />
             ) : (
-              <Feather name="user" size={22} color={color} />
+              <Feather name="user" size={20} color={color} />
             ),
         }}
       />

@@ -11,20 +11,19 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <View
         style={[
           styles.header,
           {
-            paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 8),
+            paddingTop: insets.top + (Platform.OS === 'web' ? 14 : 8),
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
           },
         ]}
       >
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Reward Hub</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Latest payouts &amp; updates</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>Reward Hub</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]} numberOfLines={1}>Latest payouts &amp; updates</Text>
         </View>
         <View style={[styles.liveBadge, { backgroundColor: colors.success + '22', borderColor: colors.success + '55' }]}>
           <View style={[styles.liveDot, { backgroundColor: colors.success }]} />
@@ -38,7 +37,7 @@ export default function FeedScreen() {
         renderItem={({ item }) => <PostCard post={item} />}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: insets.bottom + 110 },
+          { paddingBottom: insets.bottom + 80 },
         ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -58,11 +57,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
+    gap: 10,
   },
-  headerTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   liveBadge: {
     flexDirection: 'row',
@@ -72,10 +72,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
+    flexShrink: 0,
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5 },
   liveText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  listContent: { padding: 16 },
+  listContent: { padding: 14 },
   emptyState: { alignItems: 'center', paddingTop: 60 },
   emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
 });

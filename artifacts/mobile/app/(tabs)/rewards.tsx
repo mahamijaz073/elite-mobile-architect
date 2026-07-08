@@ -60,31 +60,30 @@ export default function RewardsScreen() {
         style={[
           styles.header,
           {
-            paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 8),
+            paddingTop: insets.top + (Platform.OS === 'web' ? 14 : 8),
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
           },
         ]}
       >
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Claim Rewards</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Redeem tokens for Gift Vouchers</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>Claim Rewards</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]} numberOfLines={1}>Redeem tokens for Gift Vouchers</Text>
         </View>
         <View style={[styles.tokenChip, { backgroundColor: colors.gold + '22', borderColor: colors.gold + '55' }]}>
-          <MaterialCommunityIcons name="lightning-bolt" size={14} color={colors.gold} />
+          <MaterialCommunityIcons name="lightning-bolt" size={13} color={colors.gold} />
           <Text style={[styles.tokenChipText, { color: colors.gold }]}>{tokens.toLocaleString()}</Text>
         </View>
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Guest banner */}
         {!user && (
           <View style={[styles.infoBanner, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '44' }]}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.accent} />
+            <Ionicons name="lock-closed-outline" size={17} color={colors.accent} />
             <Text style={[styles.infoBannerText, { color: colors.accent }]}>
               Sign in to redeem your tokens for real prizes.
             </Text>
@@ -93,7 +92,7 @@ export default function RewardsScreen() {
 
         {isPoolLocked && (
           <View style={[styles.lockedBanner, { backgroundColor: colors.destructive + '18', borderColor: colors.destructive + '44' }]}>
-            <Ionicons name="lock-closed" size={20} color={colors.destructive} />
+            <Ionicons name="lock-closed" size={18} color={colors.destructive} />
             <Text style={[styles.lockedText, { color: colors.destructive }]}>
               Today's Reward Pool is at capacity. Keep collecting tokens for tomorrow's draw!
             </Text>
@@ -103,12 +102,12 @@ export default function RewardsScreen() {
         {/* Balance */}
         <View style={[styles.balanceCard, { backgroundColor: colors.card, borderColor: colors.gold + '44' }]}>
           <View style={styles.balanceTop}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>AVAILABLE TOKENS</Text>
               <Text style={[styles.balanceAmount, { color: colors.gold }]}>{tokens.toLocaleString()}</Text>
             </View>
             <View style={[styles.balanceIcon, { backgroundColor: colors.gold + '22' }]}>
-              <MaterialCommunityIcons name="lightning-bolt" size={32} color={colors.gold} />
+              <MaterialCommunityIcons name="lightning-bolt" size={28} color={colors.gold} />
             </View>
           </View>
           <View style={[styles.progressBg, { backgroundColor: colors.muted }]}>
@@ -155,31 +154,31 @@ export default function RewardsScreen() {
             >
               {isPoolLocked && (
                 <View style={styles.lockedOverlay}>
-                  <Ionicons name="lock-closed" size={18} color={colors.mutedForeground} />
+                  <Ionicons name="lock-closed" size={16} color={colors.mutedForeground} />
                 </View>
               )}
               <View style={styles.tierTop}>
                 <View style={[styles.tierIconBox, { backgroundColor: tier.color + '22' }]}>
-                  <FontAwesome5 name={tier.icon as any} size={22} color={tier.color} />
+                  <FontAwesome5 name={tier.icon as any} size={20} color={tier.color} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.tierAmount, { color: tier.color }]}>{tier.amount}</Text>
-                  <Text style={[styles.tierLabel, { color: colors.foreground }]}>{tier.label}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.tierAmount, { color: tier.color }]} numberOfLines={1}>{tier.amount}</Text>
+                  <Text style={[styles.tierLabel, { color: colors.foreground }]} numberOfLines={1}>{tier.label}</Text>
                   <View style={styles.methodRow}>
-                    <MaterialCommunityIcons name="bank-outline" size={13} color={colors.mutedForeground} />
-                    <Text style={[styles.methodText, { color: colors.mutedForeground }]}>Via {tier.method}</Text>
+                    <MaterialCommunityIcons name="bank-outline" size={12} color={colors.mutedForeground} />
+                    <Text style={[styles.methodText, { color: colors.mutedForeground }]} numberOfLines={1}>Via {tier.method}</Text>
                   </View>
                 </View>
                 <View style={[styles.costBadge, { backgroundColor: colors.muted }]}>
-                  <MaterialCommunityIcons name="lightning-bolt" size={12} color={colors.gold} />
-                  <Text style={[styles.costText, { color: colors.gold }]}>{tier.tokensRequired.toLocaleString()}</Text>
+                  <MaterialCommunityIcons name="lightning-bolt" size={11} color={colors.gold} />
+                  <Text style={[styles.costText, { color: colors.gold }]}>{(tier.tokensRequired / 1000).toFixed(0)}k</Text>
                 </View>
               </View>
 
               <View style={[styles.tierProgressBg, { backgroundColor: colors.muted }]}>
                 <View style={[styles.tierProgressFill, { backgroundColor: tier.color, width: `${progress * 100}%` }]} />
               </View>
-              <Text style={[styles.tierProgressText, { color: colors.mutedForeground }]}>
+              <Text style={[styles.tierProgressText, { color: colors.mutedForeground }]} numberOfLines={1}>
                 {canRedeem ? 'Ready to redeem!' : !user ? 'Sign in to redeem' : `${deficit.toLocaleString()} more tokens needed`}
               </Text>
 
@@ -188,7 +187,7 @@ export default function RewardsScreen() {
                 onPress={() => handleRedeem(tier)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.redeemBtnText, { color: canRedeem ? '#fff' : colors.mutedForeground }]}>
+                <Text style={[styles.redeemBtnText, { color: canRedeem ? '#fff' : colors.mutedForeground }]} numberOfLines={1}>
                   {isPoolLocked ? 'Pool Locked' : !user ? 'Sign In to Redeem' : canRedeem ? 'Redeem Voucher' : 'Not enough tokens'}
                 </Text>
               </TouchableOpacity>
@@ -197,7 +196,7 @@ export default function RewardsScreen() {
         })}
 
         <View style={[styles.disclaimerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Ionicons name="shield-checkmark-outline" size={16} color={colors.accent} />
+          <Ionicons name="shield-checkmark-outline" size={15} color={colors.accent} />
           <Text style={[styles.disclaimerText, { color: colors.mutedForeground }]}>
             All Gift Vouchers are processed by our team. Vouchers are awarded for token collection. Terms apply.
           </Text>
@@ -211,52 +210,52 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, gap: 10,
   },
-  headerTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   tokenChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, flexShrink: 0,
   },
-  tokenChipText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  tokenChipText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 14 },
-  infoBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14 },
+  content: { padding: 14, gap: 12 },
+  infoBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 12 },
   infoBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
-  lockedBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14 },
+  lockedBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 14, padding: 12 },
   lockedText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', lineHeight: 18 },
-  balanceCard: { borderRadius: 20, borderWidth: 1.5, padding: 20, gap: 12 },
-  balanceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  balanceLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.5 },
-  balanceAmount: { fontSize: 42, fontFamily: 'Inter_700Bold', letterSpacing: -1 },
-  balanceIcon: { width: 60, height: 60, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  progressBg: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  balanceCard: { borderRadius: 18, borderWidth: 1.5, padding: 16, gap: 10 },
+  balanceTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  balanceLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.2 },
+  balanceAmount: { fontSize: 36, fontFamily: 'Inter_700Bold', letterSpacing: -1 },
+  balanceIcon: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  progressBg: { height: 7, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
   milestoneRow: { flexDirection: 'row', justifyContent: 'space-between' },
   milestoneText: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  howCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  stepBadge: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  stepNum: { fontSize: 13, fontFamily: 'Inter_700Bold' },
-  stepText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18 },
+  howCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
+  sectionTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  stepBadge: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  stepNum: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  stepText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
   tiersLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.5, marginTop: 2 },
-  tierCard: { borderRadius: 20, borderWidth: 1.5, padding: 18, gap: 12 },
-  lockedOverlay: { position: 'absolute', top: 14, right: 14, zIndex: 10 },
-  tierTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  tierIconBox: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  tierAmount: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  tierLabel: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  tierCard: { borderRadius: 18, borderWidth: 1.5, padding: 14, gap: 10 },
+  lockedOverlay: { position: 'absolute', top: 12, right: 12, zIndex: 10 },
+  tierTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tierIconBox: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  tierAmount: { fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  tierLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   methodRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   methodText: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  costBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8 },
-  costText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  costBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, flexShrink: 0 },
+  costText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   tierProgressBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   tierProgressFill: { height: '100%', borderRadius: 3 },
   tierProgressText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  redeemBtn: { height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  redeemBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  disclaimerCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 14, borderWidth: 1, padding: 14 },
+  redeemBtn: { height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  redeemBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  disclaimerCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 14, borderWidth: 1, padding: 12 },
   disclaimerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
 });

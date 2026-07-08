@@ -173,7 +173,7 @@ export default function PlayScreen() {
         style={[
           styles.header,
           {
-            paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 8),
+            paddingTop: insets.top + (Platform.OS === 'web' ? 14 : 8),
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
           },

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import TokenModal from '@/components/TokenModal';
 export default function SpinScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { awardTokens, recordSpin, dailySpinsUsed, maxFreeSpins, requireAuth, user } = useApp();
 
   const [showAdModal, setShowAdModal] = useState(false);
@@ -39,7 +41,6 @@ export default function SpinScreen() {
   };
 
   const handleAdRequired = () => {
-    // requireAuth gates this too — if somehow called without auth, protect it
     requireAuth(() => setShowAdModal(true));
   };
 
@@ -54,22 +55,22 @@ export default function SpinScreen() {
         style={[
           styles.header,
           {
-            paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 8),
+            paddingTop: insets.top + (Platform.OS === 'web' ? 14 : 8),
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
           },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Spin the Wheel</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>Spin the Wheel</Text>
         <View style={[styles.spinsBadge, { backgroundColor: colors.gold + '22', borderColor: colors.gold + '44' }]}>
-          <MaterialCommunityIcons name="refresh-circle" size={16} color={colors.gold} />
-          <Text style={[styles.spinsText, { color: colors.gold }]}>{freeSpinsLeft} free left</Text>
+          <MaterialCommunityIcons name="refresh-circle" size={15} color={colors.gold} />
+          <Text style={[styles.spinsText, { color: colors.gold }]}>{freeSpinsLeft} free</Text>
         </View>
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Daily spin indicator */}
@@ -84,16 +85,16 @@ export default function SpinScreen() {
             />
           ))}
           {adGrantedSpin && <View style={[styles.spinDot, { backgroundColor: colors.accent, borderColor: colors.accent }]} />}
-          <Text style={[styles.spinsStatus, { color: colors.mutedForeground }]}>
+          <Text style={[styles.spinsStatus, { color: colors.mutedForeground }]} numberOfLines={1}>
             {adGrantedSpin
-              ? 'Ad-granted spin ready!'
+              ? 'Ad spin ready!'
               : freeSpinsLeft > 0
               ? `${freeSpinsLeft} free spin${freeSpinsLeft !== 1 ? 's' : ''} today`
-              : 'Watch a video for an extra spin'}
+              : 'Watch a video for extra spin'}
           </Text>
         </View>
 
-        {/* Wheel — transparent overlay gates auth when user is not signed in */}
+        {/* Wheel */}
         <View style={[styles.wheelSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SpinWheel
             onSpinComplete={handleSpinComplete}
@@ -101,7 +102,6 @@ export default function SpinScreen() {
             requiresAd={requiresAd}
             onAdRequired={handleAdRequired}
           />
-          {/* Auth overlay: intercepts the first tap when not logged in */}
           {!user && (
             <TouchableOpacity
               style={[styles.authOverlay, { backgroundColor: 'transparent' }]}
@@ -113,7 +113,7 @@ export default function SpinScreen() {
 
         {spinResult && spinResult.tokens === 0 && (
           <View style={[styles.resultCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-            <Ionicons name="time-outline" size={24} color={colors.mutedForeground} />
+            <Ionicons name="time-outline" size={22} color={colors.mutedForeground} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.resultTitle, { color: colors.foreground }]}>Try Tomorrow!</Text>
               <Text style={[styles.resultSub, { color: colors.mutedForeground }]}>Spin again tomorrow for more chances.</Text>
@@ -136,7 +136,7 @@ export default function SpinScreen() {
             ].map(item => (
               <View key={item.label} style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                <Text style={[styles.legendLabel, { color: colors.foreground }]}>{item.label}</Text>
+                <Text style={[styles.legendLabel, { color: colors.foreground }]} numberOfLines={1}>{item.label}</Text>
                 <Text style={[styles.legendChance, { color: colors.mutedForeground }]}>{item.chance}</Text>
               </View>
             ))}
@@ -144,7 +144,7 @@ export default function SpinScreen() {
         </View>
 
         <View style={[styles.rulesCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.accent} />
+          <Ionicons name="information-circle-outline" size={16} color={colors.accent} />
           <Text style={[styles.rulesText, { color: colors.mutedForeground }]}>
             3 free spins reset at midnight. Watch a video to earn one extra spin.
           </Text>
@@ -161,48 +161,48 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, gap: 10,
   },
-  headerTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', flex: 1 },
   spinsBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1, flexShrink: 0,
   },
-  spinsText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  spinsText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 16, alignItems: 'center' },
+  content: { padding: 14, gap: 14, alignItems: 'center' },
   spinsBar: {
     width: '100%', flexDirection: 'row', alignItems: 'center',
-    borderRadius: 14, borderWidth: 1, padding: 14, gap: 8,
+    borderRadius: 14, borderWidth: 1, padding: 12, gap: 8, overflow: 'hidden',
   },
-  spinDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-  spinsStatus: { fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
+  spinDot: { width: 13, height: 13, borderRadius: 6.5, borderWidth: 2, flexShrink: 0 },
+  spinsStatus: { fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1 },
   wheelSection: {
-    width: '100%', borderRadius: 24, borderWidth: 1,
-    padding: 24, alignItems: 'center',
-    // Needed for the auth overlay to be positioned correctly
+    width: '100%', borderRadius: 20, borderWidth: 1,
+    padding: 16, alignItems: 'center',
+    overflow: 'hidden',
     position: 'relative',
   },
   authOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    borderRadius: 24,
+    borderRadius: 20,
   },
   resultCard: {
     width: '100%', flexDirection: 'row', alignItems: 'center',
-    borderRadius: 14, borderWidth: 1, padding: 14, gap: 12,
+    borderRadius: 14, borderWidth: 1, padding: 12, gap: 10,
   },
   resultTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   resultSub: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  legend: { width: '100%', borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
+  legend: { width: '100%', borderRadius: 14, borderWidth: 1, padding: 14, gap: 10 },
   legendTitle: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.5 },
-  legendGrid: { gap: 10 },
+  legendGrid: { gap: 9 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  legendDot: { width: 12, height: 12, borderRadius: 6 },
-  legendLabel: { flex: 1, fontSize: 14, fontFamily: 'Inter_500Medium' },
-  legendChance: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  legendDot: { width: 11, height: 11, borderRadius: 5.5, flexShrink: 0 },
+  legendLabel: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
+  legendChance: { fontSize: 12, fontFamily: 'Inter_400Regular', flexShrink: 0 },
   rulesCard: {
     width: '100%', flexDirection: 'row', alignItems: 'flex-start',
-    borderRadius: 14, borderWidth: 1, padding: 14, gap: 10,
+    borderRadius: 14, borderWidth: 1, padding: 12, gap: 10,
   },
-  rulesText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18 },
+  rulesText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
 });

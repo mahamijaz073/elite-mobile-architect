@@ -97,7 +97,7 @@ export default function ProfileScreen() {
         style={[
           styles.header,
           {
-            paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 8),
+            paddingTop: insets.top + (Platform.OS === 'web' ? 14 : 8),
             borderBottomColor: colors.border,
             backgroundColor: colors.background,
           },
@@ -109,12 +109,13 @@ export default function ProfileScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 110 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {!user && (
           <View style={[styles.infoBanner, { backgroundColor: colors.accent + '18', borderColor: colors.accent + '44' }]}>
-            <Ionicons name="lock-closed-outline" size={18} color={colors.accent} />
+            <Ionicons name="lock-closed-outline" size={17} color={colors.accent} />
             <Text style={[styles.infoBannerText, { color: colors.accent }]}>
               Sign in to set up your withdrawal account.
             </Text>
@@ -127,9 +128,9 @@ export default function ProfileScreen() {
               {user?.avatarInitials ?? '??'}
             </Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.userName, { color: colors.foreground }]}>{user?.name ?? 'Guest'}</Text>
-            <Text style={[styles.userSub, { color: colors.mutedForeground }]}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.userName, { color: colors.foreground }]} numberOfLines={1}>{user?.name ?? 'Guest'}</Text>
+            <Text style={[styles.userSub, { color: colors.mutedForeground }]} numberOfLines={1}>
               {tokens.toLocaleString()} tokens · {tickets} tickets
             </Text>
           </View>
@@ -154,7 +155,7 @@ export default function ProfileScreen() {
                 onChangeText={setFullName}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Payment Method</Text>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 12 }]}>Payment Method</Text>
               <View style={styles.methodRow}>
                 {METHODS.map(m => (
                   <TouchableOpacity
@@ -169,18 +170,18 @@ export default function ProfileScreen() {
                     onPress={() => setMethod(m.key)}
                     activeOpacity={0.8}
                   >
-                    <MaterialCommunityIcons name={m.icon as any} size={18} color={method === m.key ? m.color : colors.mutedForeground} />
-                    <Text style={[styles.methodText, { color: method === m.key ? m.color : colors.mutedForeground }]}>
+                    <MaterialCommunityIcons name={m.icon as any} size={16} color={method === m.key ? m.color : colors.mutedForeground} />
+                    <Text style={[styles.methodText, { color: method === m.key ? m.color : colors.mutedForeground }]} numberOfLines={1}>
                       {m.label}
                     </Text>
                     {method === m.key && (
-                      <Ionicons name="checkmark-circle" size={16} color={m.color} style={{ marginLeft: 'auto' }} />
+                      <Ionicons name="checkmark-circle" size={15} color={m.color} style={{ marginLeft: 'auto' }} />
                     )}
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 12 }]}>
                 {method === 'jazzcash' ? 'JazzCash' : method === 'easypaisa' ? 'EasyPaisa' : 'Account'} Number
               </Text>
               <TextInput
@@ -221,7 +222,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={[styles.disclaimerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Ionicons name="shield-checkmark-outline" size={16} color={colors.accent} />
+          <Ionicons name="shield-checkmark-outline" size={15} color={colors.accent} />
           <Text style={[styles.disclaimerText, { color: colors.mutedForeground }]}>
             Make sure your name and account number are correct. Prizes are sent only to the account saved here.
           </Text>
@@ -234,43 +235,43 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
+  headerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold' },
   headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 14 },
-  infoBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14 },
+  content: { padding: 14, gap: 12 },
+  infoBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 12 },
   infoBannerText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
   userCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderRadius: 16, borderWidth: 1, padding: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 14, borderWidth: 1, padding: 14, overflow: 'hidden',
   },
-  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 18, fontFamily: 'Inter_700Bold' },
-  userName: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarText: { fontSize: 16, fontFamily: 'Inter_700Bold' },
+  userName: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   userSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  formCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 4 },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17, marginBottom: 6 },
+  formCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
+  sectionTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17, marginBottom: 8 },
   fieldLabel: { fontSize: 12, fontFamily: 'Inter_500Medium', marginBottom: 6 },
   input: {
-    height: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14,
+    height: 46, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12,
     fontSize: 14, fontFamily: 'Inter_500Medium',
   },
-  methodRow: { flexDirection: 'row', gap: 10 },
+  methodRow: { flexDirection: 'row', gap: 8 },
   methodBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 12, borderWidth: 1.5, paddingVertical: 12, paddingHorizontal: 12,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 10, borderWidth: 1.5, paddingVertical: 10, paddingHorizontal: 10, overflow: 'hidden',
   },
-  methodText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  methodText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', flexShrink: 1 },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    height: 50, borderRadius: 14, marginTop: 18,
+    height: 48, borderRadius: 12, marginTop: 14,
   },
-  saveBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  saveBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   savedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, justifyContent: 'center' },
   savedText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  disclaimerCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 14, borderWidth: 1, padding: 14 },
+  disclaimerCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 14, borderWidth: 1, padding: 12 },
   disclaimerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17 },
 });
