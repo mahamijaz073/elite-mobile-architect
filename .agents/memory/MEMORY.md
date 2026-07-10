@@ -2,3 +2,4 @@
 - [Firebase offline-safe auth pattern](firebase-offline-pattern.md) — cancelled+resolved flags needed; AsyncStorage restore promise must check cancelled before setState.
 - [Spin wheel ad-gating](spin-wheel-ad-gating.md) — track adGrantedSpin boolean; reset after spin completes to prevent infinite ad-prompt loop.
 - [useColors dark-key typing](usecolors-typing.md) — explicitly type palette as `typeof colors.light` when both light/dark keys exist; avoid Record<string,...> cast (causes TS2352).
+- [Cloudinary lazy init](cloudinary-lazy-init.md) — configure third-party SDKs inside the handler, not at module load, or a missing env var crashes the whole Express app.

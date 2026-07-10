@@ -1,13 +1,63 @@
-import React from 'react';
-import { FlatList, Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Platform, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
-import { FEED_POSTS } from '@/constants/mockData';
+import { FEED_POSTS, Post } from '@/constants/mockData';
 import PostCard from '@/components/PostCard';
+
+const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+
+interface ApiPost {
+  id: number;
+  adminName: string;
+  contentText: string;
+  screenshotUrl: string | null;
+  createdAt: string;
+}
+
+function mapApiPost(p: ApiPost): Post {
+  return {
+    post_id: `api-${p.id}`,
+    admin_name: p.adminName,
+    content_text: p.contentText,
+    screenshot_url: p.screenshotUrl ?? '',
+    likes_count: 0,
+    shares_count: 0,
+    comments: [],
+    createdAt: p.createdAt,
+  };
+}
 
 export default function FeedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const [posts, setPosts] = useState<Post[]>(FEED_POSTS);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadPosts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/posts`);
+      if (!res.ok) return;
+      const data = await res.json() as { posts: ApiPost[] };
+      // Merge admin-created posts (from the API) above the built-in showcase posts.
+      setPosts([...data.posts.map(mapApiPost), ...FEED_POSTS]);
+    } catch {
+      // Keep showing the built-in posts if the server is unreachable.
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadPosts();
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -31,22 +81,29 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={FEED_POSTS}
-        keyExtractor={item => item.post_id}
-        renderItem={({ item }) => <PostCard post={item} />}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + 80 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No posts yet.</Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <ActivityIndicator color={colors.gold} size="large" style={{ marginTop: 60 }} />
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={item => item.post_id}
+          renderItem={({ item }) => <PostCard post={item} />}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 80 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.gold} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No posts yet.</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }

@@ -101,11 +101,13 @@ export default function PostCard({ post }: PostCardProps) {
 
       <Text style={[styles.contentText, { color: colors.foreground }]}>{post.content_text}</Text>
 
-      <Image
-        source={{ uri: post.screenshot_url }}
-        style={[styles.screenshot, { backgroundColor: colors.muted }]}
-        resizeMode="cover"
-      />
+      {post.screenshot_url ? (
+        <Image
+          source={{ uri: post.screenshot_url }}
+          style={[styles.screenshot, { backgroundColor: colors.muted }]}
+          resizeMode="cover"
+        />
+      ) : null}
 
       {/* Actions */}
       <View style={styles.actionBar}>

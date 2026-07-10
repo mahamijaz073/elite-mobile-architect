@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { useColors } from '@/hooks/useColors';
 
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
@@ -37,6 +39,12 @@ export default function AdminScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Create post
+  const [postText, setPostText] = useState('');
+  const [postImage, setPostImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [postingPost, setPostingPost] = useState(false);
+  const [postError, setPostError] = useState('');
+
   const loadConfig = async () => {
     setLoading(true);
     setError('');
@@ -57,11 +65,12 @@ export default function AdminScreen() {
     setLoading(true);
     setError('');
     try {
-      // Validate key by attempting a PUT with current price
-      const testRes = await fetch(`${API_BASE}/config/token-price`, {
+      // Validate key against the real admin-protected endpoint.
+      // price: 0 is intentionally invalid, so a correct key returns 400 (not 401).
+      const testRes = await fetch(`${API_BASE}/admin/config/token-price`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey.trim() },
-        body: JSON.stringify({ price: 0 }), // Will fail with 400, not 401 if key is valid
+        body: JSON.stringify({ price: 0 }),
       });
       if (testRes.status === 401) {
         setError('Wrong admin key. Try again.');
@@ -81,6 +90,64 @@ export default function AdminScreen() {
   useEffect(() => {
     if (isAuthenticated) loadConfig();
   }, [isAuthenticated]);
+
+  const pickPostImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow photo library access to attach a screenshot.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [16, 9],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPostImage(result.assets[0]);
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!postText.trim()) {
+      Alert.alert('Invalid', 'Write some post content first.');
+      return;
+    }
+    setPostingPost(true);
+    setPostError('');
+    try {
+      const formData = new FormData();
+      formData.append('contentText', postText.trim());
+      formData.append('adminName', 'QuizBox Admin');
+      if (postImage) {
+        const uriParts = postImage.uri.split('.');
+        const ext = uriParts[uriParts.length - 1] || 'jpg';
+        formData.append('image', {
+          uri: postImage.uri,
+          name: `post.${ext}`,
+          type: postImage.mimeType ?? `image/${ext}`,
+        } as any);
+      }
+
+      const res = await fetch(`${API_BASE}/admin/posts`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey.trim() },
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? `Server error ${res.status}`);
+      }
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPostText('');
+      setPostImage(null);
+      Alert.alert('Post Published ✓', 'Your post is now live in the Reward Hub feed.');
+    } catch (e: any) {
+      setPostError(e?.message ?? 'Failed to publish post.');
+    } finally {
+      setPostingPost(false);
+    }
+  };
 
   const handleSave = async () => {
     const parsed = parseFloat(newPrice);
@@ -281,6 +348,72 @@ export default function AdminScreen() {
                 )}
               </TouchableOpacity>
             </View>
+
+            {/* Create post */}
+            <View style={[styles.editCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.editTitle, { color: colors.foreground }]}>Create Reward Hub Post</Text>
+              <Text style={[styles.editSub, { color: colors.mutedForeground }]}>
+                Posts appear in the Feed tab. Images are stored on Cloudinary.
+              </Text>
+
+              <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Post content</Text>
+              <TextInput
+                style={[styles.postInput, { color: colors.foreground, backgroundColor: colors.muted, borderColor: colors.border }]}
+                placeholder="Write an announcement..."
+                placeholderTextColor={colors.mutedForeground}
+                value={postText}
+                onChangeText={setPostText}
+                multiline
+                numberOfLines={4}
+              />
+
+              <TouchableOpacity
+                style={[styles.imagePickerBtn, { borderColor: colors.border, backgroundColor: colors.muted }]}
+                onPress={pickPostImage}
+                activeOpacity={0.8}
+              >
+                {postImage ? (
+                  <Image source={{ uri: postImage.uri }} style={styles.imagePreview} resizeMode="cover" />
+                ) : (
+                  <View style={styles.imagePickerEmpty}>
+                    <MaterialCommunityIcons name="image-plus" size={22} color={colors.mutedForeground} />
+                    <Text style={[styles.imagePickerText, { color: colors.mutedForeground }]}>
+                      Attach a screenshot (optional)
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {postImage && (
+                <TouchableOpacity onPress={() => setPostImage(null)} style={styles.removeImageRow}>
+                  <Ionicons name="close-circle-outline" size={15} color={colors.destructive} />
+                  <Text style={[styles.removeImageText, { color: colors.destructive }]}>Remove image</Text>
+                </TouchableOpacity>
+              )}
+
+              {postError ? (
+                <View style={[styles.errorRow, { backgroundColor: colors.destructive + '18' }]}>
+                  <Ionicons name="alert-circle-outline" size={15} color={colors.destructive} />
+                  <Text style={[styles.errorText, { color: colors.destructive }]}>{postError}</Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.btn, { backgroundColor: colors.accent, opacity: postingPost ? 0.7 : 1 }]}
+                onPress={handleCreatePost}
+                disabled={postingPost}
+                activeOpacity={0.85}
+              >
+                {postingPost ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="send-outline" size={16} color="#fff" />
+                    <Text style={styles.btnText}>Publish Post</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </ScrollView>
@@ -350,6 +483,19 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, padding: 10,
   },
   previewText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium', lineHeight: 17 },
+
+  /* Create post */
+  postInput: {
+    minHeight: 90, borderRadius: 10, borderWidth: 1,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: 'Inter_400Regular',
+    textAlignVertical: 'top',
+  },
+  imagePickerBtn: { borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', overflow: 'hidden' },
+  imagePickerEmpty: { alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 24 },
+  imagePickerText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  imagePreview: { width: '100%', height: 150 },
+  removeImageRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
+  removeImageText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
 
   /* Shared */
   input: {
