@@ -3,3 +3,4 @@
 - [Spin wheel ad-gating](spin-wheel-ad-gating.md) — track adGrantedSpin boolean; reset after spin completes to prevent infinite ad-prompt loop.
 - [useColors dark-key typing](usecolors-typing.md) — explicitly type palette as `typeof colors.light` when both light/dark keys exist; avoid Record<string,...> cast (causes TS2352).
 - [Cloudinary lazy init](cloudinary-lazy-init.md) — configure third-party SDKs inside the handler, not at module load, or a missing env var crashes the whole Express app.
+- [EXPO_PUBLIC_ env vars missing in EAS builds](expo-public-env-eas-builds.md) — dev-workflow env injection doesn't reach `eas build`; set in eas.json/EAS env or the app crashes at launch.
