@@ -11,18 +11,27 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_API_KEY": "AIzaSyDBJeuq01OQvMI3y65on6pe5ZL2P72yZeg"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_API_KEY": "AIzaSyDBJeuq01OQvMI3y65on6pe5ZL2P72yZeg"
       }
     },
     "production": {
       "distribution": "store",
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_API_KEY": "AIzaSyDBJeuq01OQvMI3y65on6pe5ZL2P72yZeg"
       }
     }
   },

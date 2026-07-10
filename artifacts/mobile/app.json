@@ -32,7 +32,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "QuizBox uses your photos to attach a screenshot to admin posts.",
+          "cameraPermission": "QuizBox uses your camera to attach a photo to admin posts."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
